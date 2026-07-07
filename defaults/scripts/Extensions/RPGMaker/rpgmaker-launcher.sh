@@ -20,6 +20,17 @@ fi
 
 RT="$RPGMAKER_RUNTIME"
 NW="$RT/nwjs/nw"
+# RPG Maker MV/MZ render through pixi.js WebGL inside NW.js's Chromium. On Linux /
+# SteamOS, Chromium's GPU blocklist frequently disables WebGL for the Mesa driver
+# -> games die with "Your browser does not support WebGL". Force it on. Override the
+# whole set with RPGMAKER_NW_FLAGS if a game needs software rendering, e.g.:
+#   RPGMAKER_NW_FLAGS="--use-gl=swiftshader --enable-unsafe-swiftshader"
+NW_FLAGS="${RPGMAKER_NW_FLAGS:---ignore-gpu-blocklist --enable-webgl --enable-gpu-rasterization --disable-gpu-driver-bug-workarounds}"
+
+run_nw(){
+    # shellcheck disable=SC2086  # NW_FLAGS must word-split into separate args
+    exec "$NW" $NW_FLAGS "$GAME_DIR" >> "$LOG" 2>&1
+}
 # mkxp-z: run the extracted binary directly (the AppImage's AppRun hardcodes usr/bin/mkxp-z
 # but the binary sits at the AppDir root). Replicate AppRun's env: bundled libs + SRCDIR=cwd.
 MKXPZ_BIN="$RT/mkxp-z/mkxp-z"
@@ -52,7 +63,7 @@ run_mkxpz(){
 
 case "$ENGINE" in
   mv|mz)
-    exec "$NW" "$GAME_DIR" >> "$LOG" 2>&1
+    run_nw
     ;;
   vxace|xp|vx)
     run_mkxpz
@@ -60,7 +71,7 @@ case "$ENGINE" in
   *)
     # Fallback: sniff the folder if the engine tag is missing.
     if [ -f "$GAME_DIR/package.json" ]; then
-        exec "$NW" "$GAME_DIR" >> "$LOG" 2>&1
+        run_nw
     else
         run_mkxpz
     fi
