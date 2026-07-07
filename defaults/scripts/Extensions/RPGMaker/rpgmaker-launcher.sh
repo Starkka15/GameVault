@@ -6,6 +6,15 @@ export DECKY_PLUGIN_DIR="${DECKY_PLUGIN_DIR:-${HOME}/homebrew/plugins/GameVault}
 export DECKY_PLUGIN_LOG_DIR="${DECKY_PLUGIN_LOG_DIR:-${HOME}/homebrew/logs/GameVault}"
 export Extensions="${Extensions:-Extensions}"
 
+# Steam Game Mode launches with an empty / POSIX(C) locale. Under a non-UTF-8 locale
+# Chromium can't encode multibyte paths (e.g. "Kirumi 決定版") into a file:// URL, so
+# NW.js fails to load index.html -> "Your file couldn't be accessed". Ensure a UTF-8
+# locale (keep the user's if it's already UTF-8; C.UTF-8 is always present on SteamOS).
+case "${LC_ALL:-}${LANG:-}${LC_CTYPE:-}" in
+  *[Uu][Tt][Ff]*) : ;;
+  *) export LANG=C.UTF-8 LC_ALL=C.UTF-8 ;;
+esac
+
 source "${DECKY_PLUGIN_DIR}/scripts/Extensions/RPGMaker/settings.sh"
 
 ID="$1"
