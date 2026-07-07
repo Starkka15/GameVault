@@ -6,11 +6,13 @@ export DECKY_PLUGIN_DIR="${DECKY_PLUGIN_DIR:-${HOME}/homebrew/plugins/GameVault}
 export DECKY_PLUGIN_LOG_DIR="${DECKY_PLUGIN_LOG_DIR:-${HOME}/homebrew/logs/GameVault}"
 export Extensions="${Extensions:-Extensions}"
 
-# Steam Game Mode launches with an empty / POSIX(C) locale. Under a non-UTF-8 locale
-# Chromium can't encode multibyte paths (e.g. "Kirumi 決定版") into a file:// URL, so
-# NW.js fails to load index.html -> "Your file couldn't be accessed". Ensure a UTF-8
-# locale (keep the user's if it's already UTF-8; C.UTF-8 is always present on SteamOS).
-case "${LC_ALL:-}${LANG:-}${LC_CTYPE:-}" in
+# Steam Game Mode launches with LC_ALL=C (POSIX). Under a non-UTF-8 locale Chromium
+# can't encode multibyte paths (e.g. "Kirumi 決定版") into a file:// URL, so NW.js fails
+# to load index.html -> "Your file couldn't be accessed". Check the EFFECTIVE locale
+# (LC_ALL overrides LC_CTYPE overrides LANG) and force UTF-8 if it isn't already. Game
+# Mode sets LC_ALL=C *and* LANG=en_US.UTF-8, so we must look at LC_ALL, not just LANG.
+eff_locale="${LC_ALL:-${LC_CTYPE:-${LANG:-}}}"
+case "$eff_locale" in
   *[Uu][Tt][Ff]*) : ;;
   *) export LANG=C.UTF-8 LC_ALL=C.UTF-8 ;;
 esac
@@ -29,20 +31,21 @@ fi
 
 RT="$RPGMAKER_RUNTIME"
 NW="$RT/nwjs/nw"
-# RPG Maker MV/MZ render through pixi.js WebGL inside NW.js's Chromium. Three traps under
-# Steam Game Mode (gamescope), all proven on-device (ROG Ally Z1, RADV, NW.js 105) and
-# fixed by the flags below (Sabrina boots to title @ ~57fps with them):
+# RPG Maker MV/MZ render through pixi.js WebGL inside NW.js's Chromium. Two traps under
+# Steam Game Mode (gamescope), proven on-device by testing against the REAL Game Mode
+# compositor (ROG Ally Z1, RADV, NW.js 105, DISPLAY=:1):
 #   1. Chromium's GPU blocklist disables WebGL -> "browser does not support WebGL".
 #      --ignore-gpu-blocklist --enable-webgl force it back on.
-#   2. SwiftShader (software) CRASHES the GPU process (SIGSEGV) under gamescope's Vulkan
-#      WSI (unsupported swapchain pNext sType). Never fall back to software; pin ANGLE
-#      over the real RADV Vulkan: --use-gl=angle --use-angle=vulkan.
-#   3. The out-of-process GPU IPC fails under gamescope ("Failed to send GpuControl.
-#      CreateCommandBuffer" -> black screen). --in-process-gpu runs GL in the main
-#      process, removing that IPC boundary. THIS is the one that actually makes it render.
+#   2. SwiftShader (software) CRASHES the GPU process under gamescope's Vulkan WSI, so we
+#      must pin ANGLE over the real RADV Vulkan: --use-gl=angle --use-angle=vulkan.
+# CRUCIAL: do NOT add --in-process-gpu. In real Game Mode it makes Chromium report
+# "Vulkan not supported with in process gpu" then "eglCreateWindowSurface EGL_BAD_CONFIG"
+# = black screen. Out-of-process ANGLE-Vulkan is the combo that actually renders in Game
+# Mode (verified WebGL OK on RADV). (Desktop Mode is lenient and hides this; Game Mode
+# is the strict env that matters.)
 # Override only for a genuinely GPU-less host (headless CI etc.):
 #   RPGMAKER_NW_FLAGS="--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader --in-process-gpu"
-NW_FLAGS="${RPGMAKER_NW_FLAGS:---ignore-gpu-blocklist --enable-webgl --use-gl=angle --use-angle=vulkan --in-process-gpu}"
+NW_FLAGS="${RPGMAKER_NW_FLAGS:---ignore-gpu-blocklist --enable-webgl --use-gl=angle --use-angle=vulkan}"
 
 run_nw(){
     # shellcheck disable=SC2086  # NW_FLAGS must word-split into separate args
