@@ -1,0 +1,203 @@
+{
+  "gamevault-actions": {
+    "Type": "ActionSet",
+    "Content": {
+      "SetName": "GameVaultActions",
+      "Actions": [
+        {
+          "Id": "GetRPGMakerActions",
+          "Title": "Get RPG Maker actions",
+          "Type": "Init",
+          "Command": "./scripts/get-json.py rpgmaker-actions"
+        }
+      ]
+    }
+  },
+  "gamevault-actions-no-tabs": {
+    "Type": "ActionSet",
+    "Content": {
+      "SetName": "GameVaultActionsNoTabs",
+      "Actions": [
+        {
+          "Id": "GetRPGMakerActions",
+          "Title": "Get RPG Maker actions",
+          "Type": "Init",
+          "Command": "./scripts/get-json.py rpgmaker-actions"
+        }
+      ]
+    }
+  },
+  "main-menu-actions": {
+    "Type": "ActionSet",
+    "Content": {
+      "SetName": "MainMenu",
+      "Actions": [
+        {
+          "Id": "GetRPGMakerActions",
+          "Title": "Get RPG Maker actions",
+          "Type": "Init",
+          "Command": "./scripts/get-json.py rpgmaker-actions"
+        }
+      ]
+    }
+  },
+  "gamevault-tabs": {
+    "Type": "StoreTabs",
+    "Content": {
+      "Tabs": [
+        { "Title": "RPG Maker", "Type": "GameGrid", "ActionId": "GetRPGMakerActions" }
+      ]
+    }
+  },
+  "rpgmaker-games-login-actions": {
+    "Type": "ActionSet",
+    "Content": {
+      "SetName": "RPGMakerGamesLoginActions",
+      "Actions": [
+        {
+          "Id": "GetContent",
+          "Title": "Status",
+          "Type": "Status",
+          "Command": "./scripts/gamevault.sh RPGMaker loginstatus"
+        },
+        {
+          "Id": "GetSetting",
+          "Title": "Get settings",
+          "Type": "GetSettings",
+          "Command": "./scripts/gamevault.sh RPGMaker getsetting"
+        },
+        {
+          "Id": "SaveSetting",
+          "Title": "Set settings",
+          "Type": "SaveSettings",
+          "Command": "./scripts/gamevault.sh RPGMaker savesetting"
+        }
+      ]
+    }
+  },
+  "rpgmaker-script-actions": {
+    "Type": "ScriptSet",
+    "Content": {
+      "Actions": [
+        {
+          "ActionId": "Refresh",
+          "Title": "Rescan Games Folder",
+          "Type": "ScriptAction",
+          "InstalledOnly": "False"
+        }
+      ]
+    }
+  },
+  "rpgmaker-tab-config-actions": {
+    "Type": "ActionSet",
+    "Content": {
+      "SetName": "RPGMakerTabConfigEditor",
+      "Actions": [
+        {
+          "Id": "GetContent",
+          "Title": "Get the ini files as json",
+          "Type": "IniEditor",
+          "Command": "./scripts/gamevault.sh RPGMaker gettabconfig"
+        },
+        {
+          "Id": "SaveContent",
+          "Title": "Save the ini files as json",
+          "Type": "IniEditor",
+          "Command": "./scripts/gamevault.sh RPGMaker savetabconfig"
+        }
+      ]
+    }
+  },
+  "rpgmaker-actions": {
+    "Type": "ActionSet",
+    "Content": {
+      "SetName": "RPGMakerActions",
+      "Actions": [
+        {
+          "Id": "GetContent",
+          "Title": "Get RPG Maker games list",
+          "Type": "GameGrid",
+          "Command": "./scripts/gamevault.sh RPGMaker getgames"
+        },
+        {
+          "Id": "GetGameSize",
+          "Title": "Get game size",
+          "Type": "GameSize",
+          "Command": "./scripts/gamevault.sh RPGMaker getgamesize"
+        },
+        {
+          "Id": "GetDetails",
+          "Title": "Get game details",
+          "Type": "GameDetails",
+          "Command": "./scripts/gamevault.sh RPGMaker getgamedetails"
+        },
+        {
+          "Id": "GetJsonImages",
+          "Title": "Get game images as json",
+          "Type": "GameImages",
+          "Command": "./scripts/gamevault.sh RPGMaker getjsonimages"
+        },
+        {
+          "Id": "Install",
+          "Title": "Add to Steam",
+          "Type": "Install",
+          "Command": "./scripts/gamevault.sh RPGMaker install"
+        },
+        {
+          "Id": "Download",
+          "Title": "Prepare game",
+          "Type": "Download",
+          "Command": "./scripts/gamevault.sh RPGMaker download"
+        },
+        {
+          "Id": "Uninstall",
+          "Title": "Remove from Steam",
+          "Type": "Uninstall",
+          "Command": "./scripts/gamevault.sh RPGMaker uninstall"
+        },
+        {
+          "Id": "GetProgress",
+          "Title": "Get progress",
+          "Type": "GetProgress",
+          "Command": "./scripts/gamevault.sh RPGMaker getprogress"
+        },
+        {
+          "Id": "CancelInstall",
+          "Title": "Cancel",
+          "Type": "CancelInstall",
+          "Command": "./scripts/gamevault.sh RPGMaker cancelinstall"
+        },
+        {
+          "Id": "GetLoginActions",
+          "Title": "Get login status",
+          "Type": "Init",
+          "Command": "./scripts/get-json.py rpgmaker-games-login-actions"
+        },
+        {
+          "Id": "GetLaunchOptions",
+          "Title": "Get launch options",
+          "Type": "GetLaunchOptions",
+          "Command": "./scripts/gamevault.sh RPGMaker getlaunchoptions"
+        },
+        {
+          "Id": "GetTabConfigActions",
+          "Title": "Get RPG Maker tab config file actions",
+          "Type": "Init",
+          "Command": "./scripts/get-json.py rpgmaker-tab-config-actions"
+        },
+        {
+          "Id": "GetScriptActions",
+          "Title": "",
+          "Type": "ScriptActions",
+          "Command": "./scripts/get-json.py rpgmaker-script-actions"
+        },
+        {
+          "Id": "Refresh",
+          "Title": "Rescan Games Folder",
+          "Type": "Refresh",
+          "Command": "./scripts/gamevault.sh RPGMaker refresh"
+        }
+      ]
+    }
+  }
+}

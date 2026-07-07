@@ -1,0 +1,57 @@
+{
+  "Sections": [
+    {
+      "Name": "RPGMaker",
+      "Visible": true,
+      "Description": "Settings for the RPG Maker games folder. Copy your RPG Maker MV/MZ/VX Ace game folders into the games location below, then Rescan.",
+      "ModeLevel": 0,
+      "Options": [
+        {
+          "Key": "InstallLocation",
+          "Label": "Games Location",
+          "Description": "Where your RPG Maker game folders live. Games are scanned from Games/RPGMaker/ under this location.",
+          "DefaultValue": "SSD",
+          "Value": "SSD",
+          "Type": "Enum",
+          "Min": 0,
+          "Max": 0,
+          "ModeLevel": 0,
+          "Parents": [],
+          "EnumValues": [
+            {
+              "Key": "SSD",
+              "Description": "Internal SSD"
+            },
+            {
+              "Key": "MicroSD",
+              "Description": "Micro SD Card"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Name": "SteamGridDB",
+      "Visible": true,
+      "Description": "SteamGridDB artwork fallback. Fills missing game artwork from SteamGridDB.",
+      "ModeLevel": 0,
+      "Options": [
+        {
+          "Key": "SteamGridDBApiKey",
+          "Label": "API Key",
+          "Description": "Your SteamGridDB API key. Get one free at steamgriddb.com/profile/preferences/api",
+          "DefaultValue": "",
+          "Value": "",
+          "Type": "String",
+          "Min": 0,
+          "Max": 0,
+          "ModeLevel": 0,
+          "Parents": [],
+          "EnumValues": []
+        }
+      ]
+    }
+  ],
+  "Autoexec": "",
+  "AutoexecEnabled": false
+}
