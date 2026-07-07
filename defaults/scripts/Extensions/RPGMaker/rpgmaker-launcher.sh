@@ -62,8 +62,13 @@ fi
 
 run_mkxpz(){
     cd "$GAME_DIR" || exit 1
+    # Preload a Win32API shim so Windows-only DLL calls (gdiplus screenshots,
+    # user32 window resizing, etc.) degrade to no-ops instead of crashing mkxp-z
+    # at script-load. Copy it into the game dir so mkxp-z's filesystem finds it.
+    local shim_src="${DECKY_PLUGIN_DIR}/scripts/Extensions/RPGMaker/win32api_shim.rb"
+    local shim_name="gamevault_win32_shim.rb"
+    [ -f "$shim_src" ] && cp -f "$shim_src" "$GAME_DIR/$shim_name" 2>/dev/null
     # Point mkxp-z at the bundled RTP so RTP-dependent games find stock assets.
-    # Only write our config if the game has no mkxp.json of its own (don't clobber).
     local rtp_name=""
     case "$ENGINE" in
       vxace) rtp_name="RPGVXAce" ;;
@@ -71,9 +76,12 @@ run_mkxpz(){
       vx)    rtp_name="RPGVX" ;;
     esac
     local rtp_dir="$RT/rtp/$rtp_name"
-    if [ -n "$rtp_name" ] && [ -d "$rtp_dir" ] && [ ! -e "$GAME_DIR/mkxp.json" ]; then
-        printf '{ "RTP": [ "%s" ] }\n' "$rtp_dir" > "$GAME_DIR/mkxp.json" 2>/dev/null \
-            && echo "wrote mkxp.json RTP=$rtp_dir" >> "$LOG"
+    # Write our mkxp.json (RTP + preload shim) only if the game has none of its own.
+    if [ ! -e "$GAME_DIR/mkxp.json" ]; then
+        local rtp_json=""
+        [ -n "$rtp_name" ] && [ -d "$rtp_dir" ] && rtp_json="\"RTP\": [ \"$rtp_dir\" ], "
+        printf '{ %s"preloadScript": [ "%s" ] }\n' "$rtp_json" "$shim_name" > "$GAME_DIR/mkxp.json" 2>/dev/null \
+            && echo "wrote mkxp.json (RTP=${rtp_dir:-none}, preload=$shim_name)" >> "$LOG"
     fi
     exec env LD_LIBRARY_PATH="${MKXPZ_LIBS}:${LD_LIBRARY_PATH}" SRCDIR="$GAME_DIR" "$MKXPZ_BIN" >> "$LOG" 2>&1
 }
