@@ -31,21 +31,18 @@ fi
 
 RT="$RPGMAKER_RUNTIME"
 NW="$RT/nwjs/nw"
-# RPG Maker MV/MZ render through pixi.js WebGL inside NW.js's Chromium. Two traps under
-# Steam Game Mode (gamescope), proven on-device by testing against the REAL Game Mode
-# compositor (ROG Ally Z1, RADV, NW.js 105, DISPLAY=:1):
-#   1. Chromium's GPU blocklist disables WebGL -> "browser does not support WebGL".
-#      --ignore-gpu-blocklist --enable-webgl force it back on.
-#   2. SwiftShader (software) CRASHES the GPU process under gamescope's Vulkan WSI, so we
-#      must pin ANGLE over the real RADV Vulkan: --use-gl=angle --use-angle=vulkan.
-# CRUCIAL: do NOT add --in-process-gpu. In real Game Mode it makes Chromium report
-# "Vulkan not supported with in process gpu" then "eglCreateWindowSurface EGL_BAD_CONFIG"
-# = black screen. Out-of-process ANGLE-Vulkan is the combo that actually renders in Game
-# Mode (verified WebGL OK on RADV). (Desktop Mode is lenient and hides this; Game Mode
-# is the strict env that matters.)
-# Override only for a genuinely GPU-less host (headless CI etc.):
-#   RPGMAKER_NW_FLAGS="--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader --in-process-gpu"
-NW_FLAGS="${RPGMAKER_NW_FLAGS:---ignore-gpu-blocklist --enable-webgl --use-gl=angle --use-angle=vulkan}"
+# RPG Maker MV/MZ render through pixi.js WebGL inside NW.js's Chromium. Getting a GL
+# context under Steam Game Mode (gamescope) on RADV is finicky and games disagree:
+#   - --enable-webgl + --ignore-gpu-blocklist: undo Chromium's WebGL blocklist.
+#   - SwiftShader software GL SEGFAULTS under gamescope's Vulkan WSI -> never use it.
+#   - Out-of-process GPU + Vulkan: some games render, but others crash the GPU process
+#     ("CreateCommandBuffer", exit_code=512).
+#   - In-process GPU + Vulkan: "Vulkan not supported with in process gpu" -> EGL_BAD_CONFIG.
+#   => The combo with no fatal signature for any game tested: IN-process GPU + the GL
+#      (radeonsi) ANGLE backend. --in-process-gpu removes the crashing GPU-IPC boundary;
+#      --use-angle=gl avoids the vulkan-in-process conflict. Still hardware (radeonsi).
+# Override per-game via RPGMAKER_NW_FLAGS in the Steam launch options if one misbehaves.
+NW_FLAGS="${RPGMAKER_NW_FLAGS:---ignore-gpu-blocklist --enable-webgl --in-process-gpu --use-gl=angle --use-angle=gl}"
 
 run_nw(){
     # shellcheck disable=SC2086  # NW_FLAGS must word-split into separate args
