@@ -20,13 +20,20 @@ fi
 
 RT="$RPGMAKER_RUNTIME"
 NW="$RT/nwjs/nw"
-# RPG Maker MV/MZ render through pixi.js WebGL inside NW.js's Chromium. Under Steam
-# Game Mode (gamescope) NW.js's GPU process can't init a hardware GL context, so games
-# die with "Your browser does not support WebGL". SwiftShader gives a software WebGL
-# that always works (2D RPG Maker doesn't need the GPU). Verified on NW.js/Chromium 105.
-# For a real-GPU desktop, override to hardware:
-#   RPGMAKER_NW_FLAGS="--ignore-gpu-blocklist --enable-webgl"
-NW_FLAGS="${RPGMAKER_NW_FLAGS:---use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader}"
+# RPG Maker MV/MZ render through pixi.js WebGL inside NW.js's Chromium. Three traps under
+# Steam Game Mode (gamescope), all proven on-device (ROG Ally Z1, RADV, NW.js 105) and
+# fixed by the flags below (Sabrina boots to title @ ~57fps with them):
+#   1. Chromium's GPU blocklist disables WebGL -> "browser does not support WebGL".
+#      --ignore-gpu-blocklist --enable-webgl force it back on.
+#   2. SwiftShader (software) CRASHES the GPU process (SIGSEGV) under gamescope's Vulkan
+#      WSI (unsupported swapchain pNext sType). Never fall back to software; pin ANGLE
+#      over the real RADV Vulkan: --use-gl=angle --use-angle=vulkan.
+#   3. The out-of-process GPU IPC fails under gamescope ("Failed to send GpuControl.
+#      CreateCommandBuffer" -> black screen). --in-process-gpu runs GL in the main
+#      process, removing that IPC boundary. THIS is the one that actually makes it render.
+# Override only for a genuinely GPU-less host (headless CI etc.):
+#   RPGMAKER_NW_FLAGS="--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader --in-process-gpu"
+NW_FLAGS="${RPGMAKER_NW_FLAGS:---ignore-gpu-blocklist --enable-webgl --use-gl=angle --use-angle=vulkan --in-process-gpu}"
 
 run_nw(){
     # shellcheck disable=SC2086  # NW_FLAGS must word-split into separate args
