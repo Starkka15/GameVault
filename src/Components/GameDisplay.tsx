@@ -184,7 +184,11 @@ const GameDisplay: VFC<GameDisplayProperties> = (
             if (!gameSizeResult) return;
             setGameSize(gameSizeResult.Content.Size);
         })();
-        if (isInstalled) {
+        // Only the real storefronts (Epic/GOG/Amazon) implement a CheckUpdate action.
+        // Local-library extensions (Itchio, RPGMaker, ...) have no update mechanism, so
+        // calling CheckUpdate on them just throws a spurious "Action failed" toast. Gate it.
+        const UPDATE_CAPABLE_SETS = ['EpicActions', 'GOGActions', 'AmazonActions'];
+        if (isInstalled && UPDATE_CAPABLE_SETS.includes(initActionSet)) {
             (async () => {
                 try {
                     const updateResult = await executeAction<ExecuteGetGameDetailsArgs, boolean>(serverApi, initActionSet, 'CheckUpdate', { shortname: shortName });
