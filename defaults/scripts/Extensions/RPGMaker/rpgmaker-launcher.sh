@@ -20,12 +20,13 @@ fi
 
 RT="$RPGMAKER_RUNTIME"
 NW="$RT/nwjs/nw"
-# RPG Maker MV/MZ render through pixi.js WebGL inside NW.js's Chromium. On Linux /
-# SteamOS, Chromium's GPU blocklist frequently disables WebGL for the Mesa driver
-# -> games die with "Your browser does not support WebGL". Force it on. Override the
-# whole set with RPGMAKER_NW_FLAGS if a game needs software rendering, e.g.:
-#   RPGMAKER_NW_FLAGS="--use-gl=swiftshader --enable-unsafe-swiftshader"
-NW_FLAGS="${RPGMAKER_NW_FLAGS:---ignore-gpu-blocklist --enable-webgl --enable-gpu-rasterization --disable-gpu-driver-bug-workarounds}"
+# RPG Maker MV/MZ render through pixi.js WebGL inside NW.js's Chromium. Under Steam
+# Game Mode (gamescope) NW.js's GPU process can't init a hardware GL context, so games
+# die with "Your browser does not support WebGL". SwiftShader gives a software WebGL
+# that always works (2D RPG Maker doesn't need the GPU). Verified on NW.js/Chromium 105.
+# For a real-GPU desktop, override to hardware:
+#   RPGMAKER_NW_FLAGS="--ignore-gpu-blocklist --enable-webgl"
+NW_FLAGS="${RPGMAKER_NW_FLAGS:---use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader}"
 
 run_nw(){
     # shellcheck disable=SC2086  # NW_FLAGS must word-split into separate args

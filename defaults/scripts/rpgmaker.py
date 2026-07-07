@@ -44,6 +44,7 @@ class Rpgmaker(GamesDb.GamesDb):
             info = self._detect_engine(folder)
             if info is None:
                 continue
+            folder = info['root']  # resolve nested game roots (dist folders wrap the game one level down)
             shortname = "rpgm_" + hashlib.md5(os.path.realpath(folder).encode()).hexdigest()[:12]
             seen.add(shortname)
             size = self.convert_bytes(self._dir_size(folder))
@@ -90,6 +91,26 @@ class Rpgmaker(GamesDb.GamesDb):
 
     # -------------------------------------------------------------- detection --
     def _detect_engine(self, folder):
+        # Try the folder itself, then one level down: distribution archives often
+        # wrap the real game dir (e.g. "Egads RPG - Windows/Egads RPG/",
+        # "Vore Town 1.10.1 Windows/Vore Town/"). Pick the first nested game root.
+        info = self._detect_engine_at(folder)
+        if info is not None:
+            info['root'] = folder
+            return info
+        try:
+            subs = [os.path.join(folder, d) for d in sorted(os.listdir(folder))
+                    if os.path.isdir(os.path.join(folder, d))]
+        except OSError:
+            return None
+        for sub in subs:
+            info = self._detect_engine_at(sub)
+            if info is not None:
+                info['root'] = sub
+                return info
+        return None
+
+    def _detect_engine_at(self, folder):
         has_pkg = os.path.isfile(os.path.join(folder, "package.json"))
         www = os.path.join(folder, "www")
         data_root = os.path.join(folder, "data")
