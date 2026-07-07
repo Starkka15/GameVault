@@ -75,6 +75,12 @@
       ]
     }
   },
+  "rpgmaker-game-script-actions": {
+    "Type": "ScriptSet",
+    "Content": {
+      "Actions": []
+    }
+  },
   "rpgmaker-script-actions": {
     "Type": "ScriptSet",
     "Content": {
@@ -184,6 +190,12 @@
           "Title": "Get RPG Maker tab config file actions",
           "Type": "Init",
           "Command": "./scripts/get-json.py rpgmaker-tab-config-actions"
+        },
+        {
+          "Id": "GetGameScriptActions",
+          "Title": "",
+          "Type": "ScriptActions",
+          "Command": "./scripts/get-json.py rpgmaker-game-script-actions"
         },
         {
           "Id": "GetScriptActions",
