@@ -715,9 +715,18 @@ class Plugin:
             latest_version = latest_tag.lstrip("v")
 
             def version_tuple(v):
-                return tuple(int(x) for x in v.split("."))
+                # Tolerate non-version tags (e.g. "runtimes"): return None instead of crashing.
+                parts = []
+                for x in v.split("."):
+                    digits = "".join(c for c in x if c.isdigit())
+                    if digits == "":
+                        return None
+                    parts.append(int(digits))
+                return tuple(parts) if parts else None
 
-            update_available = version_tuple(latest_version) > version_tuple(current_version)
+            lv = version_tuple(latest_version)
+            cv = version_tuple(current_version)
+            update_available = bool(lv and cv and lv > cv)
 
             # Find the built GameVault.zip release asset (not the source zipball)
             download_url = ""
