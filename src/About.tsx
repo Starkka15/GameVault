@@ -65,42 +65,71 @@ export const About: VFC<{ serverAPI: ServerAPI; }> = ({ serverAPI }) => {
             buttonText: "Join",
         },
     ];
-    useEffect(() => {
-        // Create a WebSocket connection to the backend server
-        logger.debug("Connecting to WebSocket");
-        serverAPI.callPluginMethod<{}, Number>("get_websocket_port", {}).then((port) => {
-            logger.debug("configuring WebSocket on port: " + port.result);
-            const address = "ws://localhost:" + port.result + "/ws"
-            logger.debug("Connecting to WebSocket: " + address);
-            socket.current = new WebSocket(address);
-
-            // Listen for messages from the backend server
-            socket.current.onmessage = (event) => {
-                logger.debug("Received message: " + event.data);
-
-                const message = JSON.parse(event.data)
-                if (isUpdatingRef.current) {
-                    setUpdateOutput((prev) => prev + message.data + "\n");
-                    if (updateTextareaRef.current !== null) {
-                        updateTextareaRef.current.scrollTop = updateTextareaRef.current.scrollHeight;
-                    }
-                    if (message.status === "closed") {
-                        setIsUpdating(false);
-                        isUpdatingRef.current = false;
-                    }
-                } else {
-                    // Update the UI with the received output
-                    setOutput((prevOutput) => prevOutput + message.data + "\n");
-                    if (textareaRef.current !== null) {
-                        textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
-                    }
-                    if (message.status === "closed") {
-                        setIsInstalling(false)
-                    }
+    // Wire a fresh WebSocket's handlers. Kept separate so we can reconnect on demand
+    // (the socket can be CLOSED by the time the user clicks a long-lived button).
+    const wireSocket = (ws: WebSocket) => {
+        ws.onmessage = (event) => {
+            logger.debug("Received message: " + event.data);
+            const message = JSON.parse(event.data)
+            if (isUpdatingRef.current) {
+                setUpdateOutput((prev) => prev + message.data + "\n");
+                if (updateTextareaRef.current !== null) {
+                    updateTextareaRef.current.scrollTop = updateTextareaRef.current.scrollHeight;
                 }
-            };
-        });
+                if (message.status === "closed") {
+                    setIsUpdating(false);
+                    isUpdatingRef.current = false;
+                }
+            } else {
+                setOutput((prevOutput) => prevOutput + message.data + "\n");
+                if (textareaRef.current !== null) {
+                    textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
+                }
+                if (message.status === "closed") {
+                    setIsInstalling(false)
+                }
+            }
+        };
+    };
 
+    // Open (or reopen) the socket and resolve once it is OPEN. Rejects on error.
+    const connectSocket = (): Promise<WebSocket> => {
+        return new Promise((resolve, reject) => {
+            const existing = socket.current;
+            if (existing && existing.readyState === WebSocket.OPEN) {
+                resolve(existing);
+                return;
+            }
+            serverAPI.callPluginMethod<{}, Number>("get_websocket_port", {}).then((port) => {
+                const address = "ws://localhost:" + port.result + "/ws";
+                logger.debug("Connecting to WebSocket: " + address);
+                const ws = new WebSocket(address);
+                socket.current = ws;
+                wireSocket(ws);
+                ws.onopen = () => resolve(ws);
+                ws.onerror = () => reject(new Error("WebSocket connection failed"));
+            }).catch(reject);
+        });
+    };
+
+    // Send an action, guaranteeing the socket is OPEN first. On failure, report it
+    // to the given output sink so the UI never hangs silently.
+    const sendAction = async (payload: object, reportErr: (msg: string) => void) => {
+        try {
+            const ws = await connectSocket();
+            ws.send(JSON.stringify(payload));
+        } catch (e) {
+            const msg = "ERROR: could not reach the backend (" + String(e) + "). Try reopening this page.";
+            logger.error(msg);
+            reportErr(msg + "\n");
+            setIsUpdating(false);
+            isUpdatingRef.current = false;
+            setIsInstalling(false);
+        }
+    };
+
+    useEffect(() => {
+        connectSocket().catch((e) => logger.error("initial WS connect failed: " + String(e)));
         // Clean up the WebSocket connection
         return () => {
             if (socket.current) {
@@ -260,16 +289,14 @@ export const About: VFC<{ serverAPI: ServerAPI; }> = ({ serverAPI }) => {
                                                                     strTitle="Install Update"
                                                                     strDescription={`Update to v${updateInfo.latest_version}? This will restart Decky Loader.`}
                                                                     onOK={() => {
-                                                                        if (socket.current) {
-                                                                            setUpdateOutput("");
-                                                                            setIsUpdating(true);
-                                                                            isUpdatingRef.current = true;
-                                                                            socket.current.send(JSON.stringify({
-                                                                                action: "self_update",
-                                                                                download_url: updateInfo.download_url,
-                                                                                sudo_password: sudoPassword,
-                                                                            }));
-                                                                        }
+                                                                        setUpdateOutput("Connecting to backend...\n");
+                                                                        setIsUpdating(true);
+                                                                        isUpdatingRef.current = true;
+                                                                        sendAction({
+                                                                            action: "self_update",
+                                                                            download_url: updateInfo.download_url,
+                                                                            sudo_password: sudoPassword,
+                                                                        }, (m) => setUpdateOutput((prev) => prev + m));
                                                                     }}
                                                                 />
                                                             );
@@ -319,17 +346,10 @@ export const About: VFC<{ serverAPI: ServerAPI; }> = ({ serverAPI }) => {
                                 <DialogButton
                                     disabled={isInstalling}
                                     onClick={async () => {
-                                        try {
-                                            logger.debug("Sending message: install_dependencies");
-                                            if (socket.current) {
-                                                setOutput("");
-                                                setIsInstalling(true);
-                                                socket.current.send(JSON.stringify({ action: "install_dependencies" }));
-                                            }
-                                        }
-                                        catch (e) {
-                                            logger.debug(e);
-                                        }
+                                        logger.debug("Sending message: install_dependencies");
+                                        setOutput("Connecting to backend...\n");
+                                        setIsInstalling(true);
+                                        await sendAction({ action: "install_dependencies" }, (m) => setOutput((prev) => prev + m));
                                     }}
                                 >
                                     {isInstalling ? "Working... Do not close this screen." : "Install Dependencies"}
@@ -374,17 +394,10 @@ export const About: VFC<{ serverAPI: ServerAPI; }> = ({ serverAPI }) => {
                                 <DialogButton
                                     disabled={isInstalling}
                                     onClick={async () => {
-                                        try {
-                                            logger.debug("Sending message: install_ge_proton");
-                                            if (socket.current) {
-                                                setOutput("");
-                                                setIsInstalling(true);
-                                                socket.current.send(JSON.stringify({ action: "install_ge_proton" }));
-                                            }
-                                        }
-                                        catch (e) {
-                                            logger.debug(e);
-                                        }
+                                        logger.debug("Sending message: install_ge_proton");
+                                        setOutput("Connecting to backend...\n");
+                                        setIsInstalling(true);
+                                        await sendAction({ action: "install_ge_proton" }, (m) => setOutput((prev) => prev + m));
                                     }}
                                 >
                                     {isInstalling ? "Installing GE-Proton... Do not close this screen." : "Install Latest GE-Proton"}
@@ -397,17 +410,10 @@ export const About: VFC<{ serverAPI: ServerAPI; }> = ({ serverAPI }) => {
                                     disabled={isInstalling}
                                     onClick={() => showModal(<ConfirmModal strTitle="Confirm" strDescription={"Uninstall dependencies?"} onOK={
                                         async () => {
-                                            try {
-                                                logger.debug("Sending message: uninstall_dependencies");
-                                                if (socket.current) {
-                                                    setOutput("");
-                                                    setIsInstalling(true);
-                                                    socket.current.send(JSON.stringify({ action: "uninstall_dependencies" }));
-                                                }
-                                            }
-                                            catch (e) {
-                                                logger.debug(e);
-                                            }
+                                            logger.debug("Sending message: uninstall_dependencies");
+                                            setOutput("Connecting to backend...\n");
+                                            setIsInstalling(true);
+                                            await sendAction({ action: "uninstall_dependencies" }, (m) => setOutput((prev) => prev + m));
                                         }} />)}
 
                                 >

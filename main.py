@@ -502,11 +502,31 @@ class Helper:
                 if data["action"] == "self_update":
                     download_url = data.get("download_url", "")
                     sudo_password = data.get("sudo_password", "")
-                    # Only allow updates from our GitHub repo
-                    if download_url and ("github.com/Starkka15/junkstore" in download_url or "github.com/ebenbruyns/junkstore" in download_url):
+                    # Only allow updates from our GitHub repo. The repo was renamed
+                    # junkstore -> GameVault, so asset URLs now carry the GameVault name;
+                    # accept both (plus the upstream ebenbruyns repo).
+                    trusted = (
+                        "github.com/Starkka15/GameVault" in download_url
+                        or "github.com/Starkka15/junkstore" in download_url
+                        or "github.com/ebenbruyns/junkstore" in download_url
+                    )
+                    if download_url and trusted:
                         await Helper.perform_self_update(download_url, websocket, sudo_password)
                     elif download_url:
+                        # Surface the rejection to the UI so the box never hangs silently.
+                        try:
+                            await websocket.send_str(json.dumps({"status": "open", "data": f"ERROR: refusing update from untrusted URL: {download_url}\n", "type": "stdout"}))
+                            await websocket.send_str(json.dumps({"status": "closed", "data": ""}))
+                        except Exception:
+                            pass
                         decky_plugin.logger.error(f"Rejected self-update from untrusted URL: {download_url}")
+                    else:
+                        # No URL at all — don't leave the UI spinning.
+                        try:
+                            await websocket.send_str(json.dumps({"status": "open", "data": "ERROR: no download URL provided.\n", "type": "stdout"}))
+                            await websocket.send_str(json.dumps({"status": "closed", "data": ""}))
+                        except Exception:
+                            pass
 
         except Exception as e:
             decky_plugin.logger.error(f"Error in ws_handler: {e}")
