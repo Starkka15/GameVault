@@ -8,6 +8,7 @@ RT="${DECKY_PLUGIN_RUNTIME_DIR:-${HOME}/homebrew/data/GameVault}/rpgmaker"
 NWJS_VER="v0.72.0"
 MKXPZ_URL="https://github.com/Starkka15/GameVault/releases/download/runtimes/mkxp-z-x86_64.AppImage"
 RTP_VXACE_URL="https://github.com/Starkka15/GameVault/releases/download/runtimes/RPGVXAce-RTP.tar.gz"
+RTP_XP_URL="https://github.com/Starkka15/GameVault/releases/download/runtimes/RPGXP-RTP.tar.gz"
 
 function install() {
     mkdir -p "$RT"
@@ -63,6 +64,21 @@ function install() {
         fi
     else
         echo "VX Ace RTP already present"
+    fi
+
+    # --- XP RTP (stock audio for RPG Maker XP games; graphics ship in-game) ---
+    if [ ! -d "$RT/rtp/RPGXP" ]; then
+        echo "Downloading XP RTP (~9 MB)..."
+        mkdir -p "$RT/rtp"
+        if curl -sfL -o /tmp/gv-rtp-xp.tar.gz "$RTP_XP_URL"; then
+            tar xzf /tmp/gv-rtp-xp.tar.gz -C "$RT/rtp"
+            rm -f /tmp/gv-rtp-xp.tar.gz
+            echo "XP RTP installed"
+        else
+            echo "WARNING: XP RTP download failed; RTP-dependent XP games may miss stock sounds."
+        fi
+    else
+        echo "XP RTP already present"
     fi
 }
 

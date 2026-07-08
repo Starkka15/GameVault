@@ -42,7 +42,7 @@ NW="$RT/nwjs/nw"
 #      (radeonsi) ANGLE backend. --in-process-gpu removes the crashing GPU-IPC boundary;
 #      --use-angle=gl avoids the vulkan-in-process conflict. Still hardware (radeonsi).
 # Override per-game via RPGMAKER_NW_FLAGS in the Steam launch options if one misbehaves.
-NW_FLAGS="${RPGMAKER_NW_FLAGS:---ignore-gpu-blocklist --enable-webgl --in-process-gpu --use-gl=angle --use-angle=gl --enable-logging=stderr --log-level=0}"
+NW_FLAGS="${RPGMAKER_NW_FLAGS:---ignore-gpu-blocklist --enable-webgl --in-process-gpu --use-gl=angle --use-angle=gl}"
 
 run_nw(){
     # Linux is case-sensitive but RPG Maker data often references assets with

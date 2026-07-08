@@ -19,7 +19,7 @@ mkdir -p "${PLUGIN_DIR}/scripts/Extensions/RPGMaker"
 mkdir -p "${PLUGIN_DIR}/conf_schemas"
 
 echo "Copying extension scripts..."
-for f in store.sh settings.sh static.json rpgmaker-launcher.sh get-rpgmaker-args.sh install_deps.sh; do
+for f in store.sh settings.sh static.json rpgmaker-launcher.sh get-rpgmaker-args.sh install_deps.sh win32api_shim.rb casefix.js; do
     cp "${SCRIPT_DIR}/defaults/scripts/Extensions/RPGMaker/${f}" "${PLUGIN_DIR}/scripts/Extensions/RPGMaker/"
 done
 
