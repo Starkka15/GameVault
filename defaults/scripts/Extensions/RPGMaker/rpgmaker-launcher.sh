@@ -42,34 +42,42 @@ NW="$RT/nwjs/nw"
 #      (radeonsi) ANGLE backend. --in-process-gpu removes the crashing GPU-IPC boundary;
 #      --use-angle=gl avoids the vulkan-in-process conflict. Still hardware (radeonsi).
 # Override per-game via RPGMAKER_NW_FLAGS in the Steam launch options if one misbehaves.
-NW_FLAGS="${RPGMAKER_NW_FLAGS:---ignore-gpu-blocklist --enable-webgl --in-process-gpu --use-gl=angle --use-angle=gl}"
+NW_FLAGS="${RPGMAKER_NW_FLAGS:---ignore-gpu-blocklist --enable-webgl --in-process-gpu --use-gl=angle --use-angle=gl --enable-logging=stderr --log-level=0}"
 
 run_nw(){
     # Linux is case-sensitive but RPG Maker data often references assets with
-    # Windows casing -> "Failed to load: img/....png". Inject a shim (NW.js
-    # inject_js_start) that remaps missing-case loads to the real file. Copy it
-    # into the game dir and add inject_js_start to the package.json nw reads.
+    # Windows casing -> "Failed to load: img/....png". Inject a shim that remaps
+    # missing-case loads to the real file. We inject a <script> as the first tag
+    # in the game's index.html (NW.js inject_js_start proved unreliable / lacked
+    # a `require` in its context) so it runs in the page with Node integration,
+    # before any asset loads. index.html lives in www/ for MV, at root for MZ.
     local casefix_src="${DECKY_PLUGIN_DIR}/scripts/Extensions/RPGMaker/casefix.js"
-    if [ -f "$casefix_src" ] && [ -f "$GAME_DIR/package.json" ]; then
-        cp -f "$casefix_src" "$GAME_DIR/casefix.js" 2>/dev/null
-        python3 - "$GAME_DIR/package.json" <<'PY' 2>/dev/null
-import json, sys, os
+    local html_dir=""
+    if [ -f "$GAME_DIR/www/index.html" ]; then html_dir="$GAME_DIR/www"
+    elif [ -f "$GAME_DIR/index.html" ]; then html_dir="$GAME_DIR"; fi
+    if [ -f "$casefix_src" ] && [ -n "$html_dir" ]; then
+        cp -f "$casefix_src" "$html_dir/casefix.js" 2>/dev/null
+        python3 - "$html_dir/index.html" <<'PY' 2>/dev/null
+import sys, os, re
 p = sys.argv[1]
 try:
-    d = json.load(open(p, encoding='utf-8'))
+    html = open(p, encoding='utf-8', errors='ignore').read()
 except Exception:
     sys.exit(0)
-if d.get('inject_js_start') != 'casefix.js':
-    if not os.path.exists(p + '.gvbak'):
-        try:
-            open(p + '.gvbak', 'w', encoding='utf-8').write(open(p, encoding='utf-8').read())
-        except Exception:
-            pass
-    d['inject_js_start'] = 'casefix.js'
-    try:
-        json.dump(d, open(p, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
-    except Exception:
-        pass
+if 'casefix.js' in html:
+    sys.exit(0)
+if not os.path.exists(p + '.gvbak'):
+    try: open(p + '.gvbak', 'w', encoding='utf-8').write(html)
+    except Exception: pass
+tag = '<script type="text/javascript" src="casefix.js"></script>'
+# insert right after <head ...> so it runs before every other script
+m = re.search(r'<head[^>]*>', html, re.I)
+if m:
+    out = html[:m.end()] + '\n' + tag + html[m.end():]
+else:
+    out = tag + '\n' + html   # no <head>: prepend
+try: open(p, 'w', encoding='utf-8').write(out)
+except Exception: pass
 PY
     fi
     # shellcheck disable=SC2086  # NW_FLAGS must word-split into separate args
