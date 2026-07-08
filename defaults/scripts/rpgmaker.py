@@ -98,9 +98,13 @@ class Rpgmaker(GamesDb.GamesDb):
         if info is not None:
             info['root'] = folder
             return info
+        # Standard RPG Maker asset dirs are never game roots — skip them so a
+        # stray RGSSNxx.dll under System/ can't be mistaken for the game
+        # (the Game.ini at the parent is the real engine marker).
+        SKIP = {"system", "audio", "graphics", "fonts", "data", "movies", "save"}
         try:
             subs = [os.path.join(folder, d) for d in sorted(os.listdir(folder))
-                    if os.path.isdir(os.path.join(folder, d))]
+                    if os.path.isdir(os.path.join(folder, d)) and d.lower() not in SKIP]
         except OSError:
             return None
         for sub in subs:
@@ -156,7 +160,9 @@ class Rpgmaker(GamesDb.GamesDb):
                 txt = open(ini, encoding="utf-8", errors="ignore").read()
             except OSError:
                 txt = ""
-            m = re.search(r"Library\s*=\s*RGSS(\d)", txt, re.I)
+            # Library value may carry a path prefix, e.g. "System\RGSS301.dll";
+            # match the RGSSNxx dll anywhere in the value, not just after "=".
+            m = re.search(r"Library\s*=.*RGSS(\d)\d\d", txt, re.I)
             if m:
                 return {"3": "vxace", "2": "vx", "1": "xp"}.get(m.group(1))
         return None
