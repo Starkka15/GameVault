@@ -45,6 +45,33 @@ NW="$RT/nwjs/nw"
 NW_FLAGS="${RPGMAKER_NW_FLAGS:---ignore-gpu-blocklist --enable-webgl --in-process-gpu --use-gl=angle --use-angle=gl}"
 
 run_nw(){
+    # Linux is case-sensitive but RPG Maker data often references assets with
+    # Windows casing -> "Failed to load: img/....png". Inject a shim (NW.js
+    # inject_js_start) that remaps missing-case loads to the real file. Copy it
+    # into the game dir and add inject_js_start to the package.json nw reads.
+    local casefix_src="${DECKY_PLUGIN_DIR}/scripts/Extensions/RPGMaker/casefix.js"
+    if [ -f "$casefix_src" ] && [ -f "$GAME_DIR/package.json" ]; then
+        cp -f "$casefix_src" "$GAME_DIR/casefix.js" 2>/dev/null
+        python3 - "$GAME_DIR/package.json" <<'PY' 2>/dev/null
+import json, sys, os
+p = sys.argv[1]
+try:
+    d = json.load(open(p, encoding='utf-8'))
+except Exception:
+    sys.exit(0)
+if d.get('inject_js_start') != 'casefix.js':
+    if not os.path.exists(p + '.gvbak'):
+        try:
+            open(p + '.gvbak', 'w', encoding='utf-8').write(open(p, encoding='utf-8').read())
+        except Exception:
+            pass
+    d['inject_js_start'] = 'casefix.js'
+    try:
+        json.dump(d, open(p, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+PY
+    fi
     # shellcheck disable=SC2086  # NW_FLAGS must word-split into separate args
     exec "$NW" $NW_FLAGS "$GAME_DIR" >> "$LOG" 2>&1
 }
