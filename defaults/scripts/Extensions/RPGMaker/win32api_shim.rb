@@ -10,6 +10,16 @@
 # that returns 0, instead of crashing. The Windows-only feature silently does
 # nothing (mkxp-z manages its own window, and screenshots are non-essential),
 # but the game boots and plays. Functions that DO resolve are untouched.
+# --- Ruby 1.9 compatibility (mkxp-z bundles Ruby 3.1) ---
+# RPG Maker VX Ace shipped Ruby 1.9, which had the uppercase boolean/nil
+# constants TRUE/FALSE/NIL. Ruby 2.4 deprecated them and 3.x removed them, so
+# legacy scripts that write `TRUE`/`FALSE`/`NIL` die at load with a NameError
+# (e.g. "uninitialized constant CP::COMPOSITE::TRUE"). Redefine at top level so
+# they resolve everywhere via Object constant lookup.
+TRUE  = true  unless defined?(TRUE)
+FALSE = false unless defined?(FALSE)
+NIL   = nil   unless defined?(NIL)
+
 if defined?(Win32API)
   class Win32API
     alias_method :__gv_orig_initialize, :initialize
