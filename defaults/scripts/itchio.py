@@ -115,6 +115,15 @@ class Itchio(GamesDb.GamesDb):
         conn.commit()
         conn.close()
 
+        # Optionally import games from the user's itch.io Collections (issue #3). Owned
+        # games are fetched first (above), so overlapping titles keep their download key;
+        # collection-only games are added keyless and install via the direct uploads path.
+        if os.environ.get('ITCHIO_IMPORTCOLLECTIONS', 'false').strip().lower() in ('true', '1', 'on'):
+            try:
+                self._import_collections(set(id_list))
+            except Exception as e:
+                print(f"itch.io collection import failed: {e}", file=sys.stderr)
+
     def proccess_leftovers(self, game_data, download_key_id=''):
         """Insert game from itch.io API data that wasn't found in GamesDb."""
         title = game_data.get('title', 'Unknown')
@@ -157,6 +166,85 @@ class Itchio(GamesDb.GamesDb):
             print(f"Error parsing metadata for itch.io game: {title} {e}", file=sys.stderr)
 
         conn.close()
+
+    def _get_collections(self):
+        """List the user's itch.io collections ({id, title}), paginated."""
+        collections = []
+        page = 1
+        while True:
+            try:
+                data = self.api_request(
+                    f"https://api.itch.io/profile/collections?page={page}",
+                    use_bearer=True)
+            except Exception as e:
+                print(f"Error fetching collections page {page}: {e}", file=sys.stderr)
+                break
+            cols = data.get('collections', [])
+            if not cols:
+                break
+            collections.extend(cols)
+            page += 1
+        return collections
+
+    def _get_collection_games(self, collection_id):
+        """All game objects in a collection (paginated). Each collection-game entry wraps
+        a full 'game' object (id/title/cover_url/short_text) — same shape as owned-keys."""
+        games = []
+        page = 1
+        while True:
+            try:
+                data = self.api_request(
+                    f"https://api.itch.io/collections/{collection_id}/collection-games?page={page}",
+                    use_bearer=True)
+            except Exception as e:
+                print(f"Error fetching collection {collection_id} page {page}: {e}", file=sys.stderr)
+                break
+            entries = data.get('collection_games', [])
+            if not entries:
+                break
+            for entry in entries:
+                g = entry.get('game')
+                if g and g.get('id'):
+                    games.append(g)
+            page += 1
+        return games
+
+    def _import_collections(self, skip_ids):
+        """Insert every game from the user's collections that isn't already in the library.
+        skip_ids = game ids already handled (owned) so we don't touch their download keys;
+        proccess_leftovers also re-checks the DB, so overlaps are safe either way."""
+        collections = self._get_collections()
+        print(f"Importing from {len(collections)} itch.io collection(s)", file=sys.stderr)
+        seen = set(str(x) for x in skip_ids)
+        added = 0
+        for col in collections:
+            cid = col.get('id')
+            if not cid:
+                continue
+            title = col.get('title', cid)
+            games = self._get_collection_games(cid)
+            print(f"  collection '{title}' ({cid}): {len(games)} game(s)", file=sys.stderr)
+            for game in games:
+                gid = str(game.get('id', ''))
+                if not gid or gid in seen:
+                    continue
+                seen.add(gid)
+                self.proccess_leftovers(game, '')
+                added += 1
+        print(f"Imported {added} collection game(s)", file=sys.stderr)
+        return added
+
+    def get_collections(self):
+        """JSON list of the user's collections (id + title + game count). For debugging /
+        a future collection picker."""
+        cols = []
+        for col in self._get_collections():
+            cols.append({
+                'Id': str(col.get('id', '')),
+                'Title': col.get('title', ''),
+                'GamesCount': col.get('games_count', 0),
+            })
+        return json.dumps({'Type': 'Collections', 'Content': {'Collections': cols}})
 
     def _get_download_key(self, game_id):
         """Get the download key ID for a game from the database."""
