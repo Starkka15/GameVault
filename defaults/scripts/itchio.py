@@ -124,8 +124,9 @@ class Itchio(GamesDb.GamesDb):
             except Exception as e:
                 print(f"itch.io collection import failed: {e}", file=sys.stderr)
 
-    def proccess_leftovers(self, game_data, download_key_id=''):
-        """Insert game from itch.io API data that wasn't found in GamesDb."""
+    def proccess_leftovers(self, game_data, download_key_id='', source="Itchio"):
+        """Insert game from itch.io API data that wasn't found in GamesDb.
+        source tags row origin: "Itchio" = owned/browse, "ItchioCollection" = collection import."""
         title = game_data.get('title', 'Unknown')
         print(f"Processing leftover itch.io game: {title}", file=sys.stderr)
         conn = self.get_connection()
@@ -141,7 +142,7 @@ class Itchio(GamesDb.GamesDb):
                 notes = game_data.get('short_text', '')
 
                 vals = [
-                    title, notes, "", download_key_id, "",  "", "Itchio",
+                    title, notes, "", download_key_id, "",  "", source,
                     game_id, "", "", "", "",
                     "", "", "", "", shortname,
                 ]
@@ -231,29 +232,129 @@ class Itchio(GamesDb.GamesDb):
         return games
 
     def _import_collections(self, skip_ids):
-        """Insert every game from the user's collections that isn't already in the library.
-        skip_ids = game ids already handled (owned) so we don't touch their download keys;
-        proccess_leftovers also re-checks the DB, so overlaps are safe either way."""
+        """Import the user's itch.io Collections. Each collection becomes its own sub-tab under
+        the itch.io tab. skip_ids = owned game ids (kept as owned, never demoted). Collection-
+        only games are inserted keyless (install via the direct uploads path). EVERY collection
+        game — owned or not — is tagged with its collection id(s) in the Collections column so
+        the per-collection sub-tab can filter on it. The runtime static.json (per-collection
+        ActionSets + sub-tab Init actions) is regenerated at the end."""
         collections = self._get_collections()
         print(f"Importing from {len(collections)} itch.io collection(s)", file=sys.stderr)
-        seen = set(str(x) for x in skip_ids)
-        added = 0
+        owned = set(str(x) for x in skip_ids)
+        membership = {}          # gid -> set(collection_id)
+        meta = []                # [(collection_id, title)] in itch order
         for col in collections:
             cid = col.get('id')
             if not cid:
                 continue
+            cid = str(cid)
             title = col.get('title', cid)
+            meta.append((cid, title))
             games = self._get_collection_games(cid)
             print(f"  collection '{title}' ({cid}): {len(games)} game(s)", file=sys.stderr)
             for game in games:
                 gid = str(game.get('id', ''))
-                if not gid or gid in seen:
+                if not gid:
                     continue
-                seen.add(gid)
-                self.proccess_leftovers(game, '')
-                added += 1
-        print(f"Imported {added} collection game(s)", file=sys.stderr)
+                is_new = gid not in membership
+                membership.setdefault(gid, set()).add(cid)
+                if is_new and gid not in owned:
+                    # collection-only game: insert (proccess_leftovers no-ops if it exists)
+                    self.proccess_leftovers(game, '', source="ItchioCollection")
+        self._persist_collections(meta, membership, owned)
+        self._write_collection_static(meta)
+        added = len([g for g in membership if g not in owned])
+        print(f"Imported {added} collection game(s); {len(meta)} collection tab(s)", file=sys.stderr)
         return added
+
+    def _safe_id(self, cid):
+        """Collection id reduced to a token safe for SetNames / filenames / ActionIds."""
+        return re.sub(r'[^A-Za-z0-9]', '', str(cid))
+
+    def _ensure_collection_schema(self, c):
+        # Dedicated membership column (a game may be in several collections) + a lookup table
+        # of the user's collections (id -> title). ALTER is a no-op once the column exists.
+        try:
+            c.execute("ALTER TABLE Game ADD COLUMN Collections TEXT")
+        except Exception:
+            pass
+        c.execute("CREATE TABLE IF NOT EXISTS Collections (CollectionId TEXT UNIQUE, Title TEXT, SortOrder INTEGER)")
+
+    def _persist_collections(self, meta, membership, owned):
+        """Rebuild the Collections lookup table (prunes collections deleted on itch) and tag the
+        Collections column on every collection game. Owned games keep Source='Itchio' (so they
+        stay on the Owned tab) but are still tagged, so they also appear on their collection's tab."""
+        conn = self.get_connection()
+        c = conn.cursor()
+        self._ensure_collection_schema(c)
+        c.execute("DELETE FROM Collections")
+        for i, (cid, title) in enumerate(meta):
+            c.execute("INSERT OR REPLACE INTO Collections (CollectionId, Title, SortOrder) VALUES (?,?,?)",
+                      (cid, title, i))
+        for gid, cids in membership.items():
+            tag = ',' + ','.join(sorted(cids)) + ','
+            c.execute("UPDATE Game SET Collections=? WHERE ShortName=?", (tag, gid))
+            if gid not in owned:
+                c.execute("UPDATE Game SET Source='ItchioCollection' WHERE ShortName=? AND (Source IS NULL OR Source='Itchio')", (gid,))
+        conn.commit()
+        conn.close()
+
+    def _write_collection_static(self, meta):
+        """Generate the runtime static.json that get-json deep-merges: for each collection an
+        Init action inside the ItchioTabs set + a full ActionSet clone of itchio-actions whose
+        GetContent is bound to that collection id. Cloning the plugin's itchio-actions keeps the
+        install/launch/details surface identical and in sync. Written under the writable runtime
+        data dir (get-json scans ../../data/GameVault/scripts/Extensions)."""
+        try:
+            import copy
+            runtime = os.environ.get('DECKY_PLUGIN_RUNTIME_DIR', os.path.expanduser('~/homebrew/data/GameVault'))
+            plugin = os.environ.get('DECKY_PLUGIN_DIR', os.path.expanduser('~/homebrew/plugins/GameVault'))
+            base_path = os.path.join(plugin, 'scripts', 'Extensions', 'Itchio', 'static.json')
+            with open(base_path) as f:
+                base = json.load(f)['itchio-actions']
+            # itchio-tabs here carries ONLY the per-collection Init actions; get-json merges them
+            # onto the plugin's itchio-tabs (which supplies GetContent + the Owned Init action).
+            fragment = {'itchio-tabs': {'Type': 'ActionSet',
+                                        'Content': {'SetName': 'ItchioTabs', 'Actions': []}}}
+            for cid, _title in meta:
+                sid = self._safe_id(cid)
+                key = f'itchio-collection-{sid}-actions'
+                aset = copy.deepcopy(base)
+                aset['Content']['SetName'] = f'ItchioCollection_{sid}Actions'
+                for a in aset['Content']['Actions']:
+                    if a.get('Id') == 'GetContent':
+                        a['Command'] = f'./scripts/gamevault.sh Itchio getcollectiongames {cid}'
+                fragment[key] = aset
+                fragment['itchio-tabs']['Content']['Actions'].append({
+                    'Id': f'GetItchioCollection_{sid}',
+                    'Title': f'itch.io collection {cid}',
+                    'Type': 'Init',
+                    'Command': f'./scripts/get-json.py {key}'
+                })
+            out_dir = os.path.join(runtime, 'scripts', 'Extensions', 'ItchioCollections')
+            os.makedirs(out_dir, exist_ok=True)
+            with open(os.path.join(out_dir, 'static.json'), 'w') as f:
+                json.dump(fragment, f, indent=2)
+        except Exception as e:
+            print(f"Failed to write collection static.json: {e}", file=sys.stderr)
+
+    def get_itch_tabs(self):
+        """StoreTabs for the itch.io tab: an 'Owned' sub-tab + one sub-tab per collection. Also
+        regenerates the runtime static.json so the per-collection ActionSets referenced here
+        always resolve (defensive: the file can be missing after a reinstall)."""
+        conn = self.get_connection()
+        c = conn.cursor()
+        self._ensure_collection_schema(c)
+        c.row_factory = sqlite3.Row
+        rows = c.execute("SELECT CollectionId, Title FROM Collections ORDER BY SortOrder").fetchall()
+        conn.close()
+        meta = [(r['CollectionId'], r['Title']) for r in rows]
+        self._write_collection_static(meta)
+        tabs = [{'Title': 'Owned', 'Type': 'GameGrid', 'ActionId': 'GetItchioActions'}]
+        for cid, title in meta:
+            tabs.append({'Title': title or cid, 'Type': 'GameGrid',
+                         'ActionId': f'GetItchioCollection_{self._safe_id(cid)}'})
+        return json.dumps({'Type': 'StoreTabs', 'Content': {'Tabs': tabs}})
 
     def get_collections(self):
         """JSON list of the user's collections (id + title + game count). For debugging /

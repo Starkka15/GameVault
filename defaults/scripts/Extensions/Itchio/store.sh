@@ -20,7 +20,9 @@ function Itchio_refresh() {
     TEMP=$(Itchio_init)
     echo "{\"Type\": \"RefreshContent\", \"Content\": {\"Message\": \"Refreshed\"}}"
 }
-function Itchio_getgames(){
+# Shared grid producer. $4 = origin ("owned" | "collection") splits the itch.io library
+# into the Owned tab and the Collections tab; empty = no split (legacy).
+function _Itchio_grid(){
     if [ -z "${1}" ]; then
         FILTER=""
     else
@@ -36,16 +38,31 @@ function Itchio_getgames(){
     else
         LIMIT="${3}"
     fi
+    ORIGIN="${4}"
     IMAGE_PATH=""
-    TEMP=$($ITCHIOCONF --getgameswithimages "${IMAGE_PATH}" "${FILTER}" "${INSTALLED}" "${LIMIT}" "true" --dbfile "$DBFILE")
+    TEMP=$($ITCHIOCONF --getgameswithimages "${IMAGE_PATH}" "${FILTER}" "${INSTALLED}" "${LIMIT}" "true" "${ORIGIN}" --dbfile "$DBFILE")
     echo "$TEMP" >> $DECKY_PLUGIN_LOG_DIR/debug.log
     if echo "$TEMP" | jq -e '.Content.Games | length == 0' &>/dev/null; then
         if [[ $FILTER == "" ]] && [[ $INSTALLED == "false" ]]; then
             TEMP=$(Itchio_init)
-            TEMP=$($ITCHIOCONF --getgameswithimages "${IMAGE_PATH}" "${FILTER}" "${INSTALLED}" "${LIMIT}" "true" --dbfile "$DBFILE")
+            TEMP=$($ITCHIOCONF --getgameswithimages "${IMAGE_PATH}" "${FILTER}" "${INSTALLED}" "${LIMIT}" "true" "${ORIGIN}" --dbfile "$DBFILE")
         fi
     fi
     echo "$TEMP"
+}
+# Owned tab: everything that isn't a collection-only import.
+function Itchio_getgames(){
+    _Itchio_grid "${1}" "${2}" "${3}" "owned"
+}
+# Nested Owned + per-collection sub-tabs for the itch.io tab. Returns StoreTabs JSON; the
+# per-collection ActionSets are generated into the runtime static.json at scan time.
+function Itchio_getitchtabs(){
+    $ITCHIOCONF --get-itch-tabs --dbfile "$DBFILE"
+}
+# Per-collection tab. $1 = collection id (baked into the ActionSet Command); the grid
+# params (filter/installed/limit) follow as $2/$3/$4.
+function Itchio_getcollectiongames(){
+    _Itchio_grid "${2}" "${3}" "${4}" "collection:${1}"
 }
 function Itchio_saveplatformconfig(){
     cat | $ITCHIOCONF --parsejson "${1}" --dbfile "$DBFILE" --platform Proton --fork "" --version "" --dbfile "$DBFILE"

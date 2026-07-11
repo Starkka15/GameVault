@@ -207,19 +207,39 @@ class GameSet:
         conn.commit()
         conn.close()
 
-    def get_games_with_images(self,  image_prefix, filter_str, installed, isLimited, urlencode, needsLogin):
+    def get_games_with_images(self,  image_prefix, filter_str, installed, isLimited, urlencode, needsLogin, origin=None):
         conn = self.get_connection()
         c = conn.cursor()
         c.row_factory = sqlite3.Row
         limited_clause = ""
         if (isLimited.lower() == "true"):
             limited_clause = "LIMIT 100"
+        # Optional origin filter (itch.io Owned vs per-Collection sub-tabs). Owned/browse rows
+        # are Source='Itchio'; collection-only imports are 'ItchioCollection'. Collection
+        # membership (a game may be in several) is stored in a dedicated Collections column as
+        # ",<id>,<id>," (added by the itch extension via ALTER). Other extensions never pass
+        # origin, so their queries — and their schemas — are untouched.
+        origin_clause = ""
+        origin_param = None
+        if origin:
+            o = origin.lower()
+            if o.startswith("collection:"):
+                cid = origin.split(":", 1)[1]
+                if cid:
+                    origin_clause = " AND Collections LIKE ?"
+                    origin_param = '%,' + cid + ',%'
+            elif o == "collection":
+                origin_clause = " AND Source = 'ItchioCollection'"
+            elif o == "owned":
+                origin_clause = " AND (Source IS NULL OR Source <> 'ItchioCollection')"
+        like_param = '%' + filter_str.lower().replace(" ", "%") + '%'
+        params = [like_param] if origin_param is None else [like_param, origin_param]
         if (installed.lower() == "true"):
             c.execute(
-                f"SELECT Game.ID, ShortName, Title, SteamClientID FROM Game WHERE SteamClientID IS NOT NULL AND SteamClientID <> '' and LOWER(Title) LIKE ? ORDER BY Title COLLATE NOCASE {limited_clause}", ('%' + filter_str.lower().replace(" ", "%") + '%',))
+                f"SELECT Game.ID, ShortName, Title, SteamClientID FROM Game WHERE SteamClientID IS NOT NULL AND SteamClientID <> '' and LOWER(Title) LIKE ?{origin_clause} ORDER BY Title COLLATE NOCASE {limited_clause}", params)
         else:
             c.execute(
-                f"SELECT Game.ID, ShortName, Title, SteamClientID FROM Game WHERE LOWER(Title) LIKE ? ORDER BY Title COLLATE NOCASE {limited_clause}", ('%' + filter_str.lower().replace(" ", "%") + '%',))
+                f"SELECT Game.ID, ShortName, Title, SteamClientID FROM Game WHERE LOWER(Title) LIKE ?{origin_clause} ORDER BY Title COLLATE NOCASE {limited_clause}", params)
         games = c.fetchall()
         result = []
         for game in games:
@@ -911,13 +931,16 @@ class GenericArgs:
             urlencode = False
             if (self.args.urlencode):
                 urlencode = True
+            origin = None
             if (len(self.args.getgameswithimages) > 1):
                 filter = self.args.getgameswithimages[1]
                 installed = self.args.getgameswithimages[2]
                 isLimited = self.args.getgameswithimages[3]
                 needsLogin = self.args.getgameswithimages[4]
+            if (len(self.args.getgameswithimages) > 5):
+                origin = self.args.getgameswithimages[5]
             print(self.gameSet.get_games_with_images(
-                self.args.getgameswithimages[0], filter, installed, isLimited, urlencode, needsLogin))
+                self.args.getgameswithimages[0], filter, installed, isLimited, urlencode, needsLogin, origin))
         if self.args.update_umu_id:
             self.gameSet.update_umu_id(self.args.update_umu_id[0], self.args.update_umu_id[1])
         

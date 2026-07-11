@@ -53,6 +53,8 @@ class ItchioArgs(GameSet.GenericArgs):
             '--get-browse-details', help='Get details for a browsed game by ID')
         self.parser.add_argument(
             '--get-collections', help='List the user\'s itch.io collections', action='store_true')
+        self.parser.add_argument(
+            '--get-itch-tabs', help='Owned + per-collection sub-tabs (StoreTabs)', action='store_true')
 
     def parseArgs(self):
         super().parseArgs()
@@ -104,6 +106,8 @@ class ItchioArgs(GameSet.GenericArgs):
                 print(self.gameSet.browse_games(filter_text))
             if self.args.get_collections:
                 print(self.gameSet.get_collections())
+            if self.args.get_itch_tabs:
+                print(self.gameSet.get_itch_tabs())
             if self.args.add_browse_to_library:
                 print(self.gameSet.add_browse_to_library(self.args.add_browse_to_library))
             if self.args.get_browse_details:

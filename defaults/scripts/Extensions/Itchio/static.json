@@ -9,6 +9,12 @@
           "Title": "Get itch.io store actions",
           "Type": "Init",
           "Command": "./scripts/get-json.py itchio-actions"
+        },
+        {
+          "Id": "GetItchioTabs",
+          "Title": "Get itch.io tab container (Owned + Collections)",
+          "Type": "Init",
+          "Command": "./scripts/get-json.py itchio-tabs"
         }
       ]
     }
@@ -45,7 +51,11 @@
     "Type": "StoreTabs",
     "Content": {
       "Tabs": [
-        { "Title": "itch.io", "Type": "GameGrid", "ActionId": "GetItchioActions" }
+        {
+          "Title": "itch.io",
+          "Type": "GameGrid",
+          "ActionId": "GetItchioTabs"
+        }
       ]
     }
   },
@@ -315,6 +325,26 @@
           "Title": "Apply proton fixes",
           "Type": "Executable",
           "Command": "./scripts/gamevault.sh Itchio apply-protonfixes"
+        }
+      ]
+    }
+  },
+  "itchio-tabs": {
+    "Type": "ActionSet",
+    "Content": {
+      "SetName": "ItchioTabs",
+      "Actions": [
+        {
+          "Id": "GetContent",
+          "Title": "Get itch.io Owned + Collections sub-tabs",
+          "Type": "TabPage",
+          "Command": "./scripts/gamevault.sh Itchio getitchtabs"
+        },
+        {
+          "Id": "GetItchioActions",
+          "Title": "Get itch.io owned games actions",
+          "Type": "Init",
+          "Command": "./scripts/get-json.py itchio-actions"
         }
       ]
     }
