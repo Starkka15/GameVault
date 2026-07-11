@@ -22,6 +22,8 @@ class RpgmakerArgs(GameSet.GenericArgs):
         self.parser.add_argument(
             '--get-args', help='Get game arguments (engine tag)')
         self.parser.add_argument(
+            '--get-app-path', help='Get ApplicationPath (entrypoint rel to root) for game')
+        self.parser.add_argument(
             '--launchoptions', nargs=3, help='Get launch options')
         self.parser.add_argument(
             '--getloginstatus', help='Get login status', action='store_true')
@@ -33,6 +35,9 @@ class RpgmakerArgs(GameSet.GenericArgs):
             '--flush-cache', help='Flush cache', action='store_true')
         self.parser.add_argument(
             '--offline', help='Offline mode', action='store_true')
+        self.parser.add_argument(
+            '--migrate-added-games', help='One-time re-home of DB paths RPGMaker->AddedGames',
+            action='store_true')
 
     def parseArgs(self):
         super().parseArgs()
@@ -43,6 +48,8 @@ class RpgmakerArgs(GameSet.GenericArgs):
         try:
             super().processArgs()
 
+            if self.args.migrate_added_games:
+                self.gameSet.migrate_added_games_paths()
             if self.args.list:
                 self.gameSet.get_list(self.args.offline)
             if self.args.get_game_dir:
@@ -51,6 +58,13 @@ class RpgmakerArgs(GameSet.GenericArgs):
                 conn = self.gameSet.get_connection()
                 c = conn.cursor()
                 c.execute("SELECT Arguments FROM Game WHERE ShortName=?", (self.args.get_args,))
+                result = c.fetchone()
+                conn.close()
+                print(result[0] if result and result[0] else "")
+            if self.args.get_app_path:
+                conn = self.gameSet.get_connection()
+                c = conn.cursor()
+                c.execute("SELECT ApplicationPath FROM Game WHERE ShortName=?", (self.args.get_app_path,))
                 result = c.fetchone()
                 conn.close()
                 print(result[0] if result and result[0] else "")

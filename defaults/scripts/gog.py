@@ -2,6 +2,8 @@ import datetime
 import re
 import json
 import os
+import glob
+import zipfile
 import sqlite3
 import sys
 import subprocess
@@ -610,6 +612,204 @@ class GOG(GamesDb.GamesDb):
         return json.dumps({'Type': 'GameSize', 'Content': {'Size': size}})
 
     @staticmethod
+    def _gogdl_manifest_path(game_id):
+        """Path to gogdl/Heroic's cached build manifest for a game (its record of what
+        is installed). Same location GOG store.sh uninstall clears."""
+        return os.path.join(
+            os.path.expanduser('~'),
+            '.var/app/com.github.heroic_games_launcher.heroic-gogdl/config/heroic_gogdl/manifests',
+            str(game_id))
+
+    def _prune_dlc_from_gogdl_cache(self, game_id, dlc_id):
+        """Strip a DLC's depots/product/HGLdlcs entry from gogdl's cached manifest so a
+        later reinstall sees the DLC as a fresh delta. gogdl diffs the requested manifest
+        against THIS cache (never the disk), so if the cache still lists the removed DLC's
+        depots, `download --with-dlcs --dlcs <id>` computes 'Nothing to do' and downloads
+        nothing. Pruning here restores the small-delta reinstall path."""
+        path = self._gogdl_manifest_path(game_id)
+        if not os.path.isfile(path):
+            return
+        dlc_id = str(dlc_id)
+        try:
+            with open(path) as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, OSError) as e:
+            print(f"[remove_dlc] cannot read gogdl cache {path}: {e}", file=sys.stderr)
+            return
+        changed = False
+        for key, id_field in (('depots', 'productId'), ('products', 'productId'), ('HGLdlcs', 'id')):
+            lst = data.get(key)
+            if isinstance(lst, list):
+                pruned = [x for x in lst if str(x.get(id_field)) != dlc_id]
+                if len(pruned) != len(lst):
+                    data[key] = pruned
+                    changed = True
+        if changed:
+            try:
+                with open(path, 'w') as f:
+                    json.dump(data, f)
+                print(f"[remove_dlc] pruned DLC {dlc_id} from gogdl cache {path}", file=sys.stderr)
+            except OSError as e:
+                print(f"[remove_dlc] cannot write gogdl cache {path}: {e}", file=sys.stderr)
+
+    def _game_root(self, game_id):
+        """Resolve a game's on-disk install folder from the DB (RootFolder, else InstallPath)."""
+        conn = self.get_connection()
+        c = conn.cursor()
+        c.execute("SELECT RootFolder, InstallPath FROM Game WHERE ShortName=?", (game_id,))
+        row = c.fetchone()
+        conn.close()
+        if not row:
+            return None
+        return row[0] or row[1] or None
+
+    def get_dlcs(self, game_id):
+        """List a game's DLCs (from gogdl info) plus whether each is installed.
+        Installed = a goggame-<dlcid>.info metadata file exists in the game's RootFolder."""
+        try:
+            info = self.execute_shell_json(
+                f"{self.gogdl_cmd} --auth-config-path {self.auth_tokens} info {game_id} --os windows")
+        except Exception as e:
+            print(f"[get_dlcs] gogdl info failed for {game_id}: {e}", file=sys.stderr)
+            return json.dumps({'Type': 'DlcList', 'Content': {'Dlcs': [], 'Error': str(e)}})
+
+        root = self._game_root(game_id)
+        lang = os.environ.get('GOG_LANGUAGE', 'en-US')
+        out = []
+        for dlc in (info.get('dlcs') or []):
+            dlc_id = str(dlc.get('id', ''))
+            if not dlc_id:
+                continue
+            title = dlc.get('title') or f"DLC {dlc_id}"
+            # size is {lang: {download_size, disk_size}}; prefer selected lang, then '*', then first
+            size_bytes = 0
+            size_data = dlc.get('size') or {}
+            if isinstance(size_data, dict):
+                entry = size_data.get(lang) or size_data.get('*')
+                if not entry and size_data:
+                    entry = next(iter(size_data.values()))
+                if isinstance(entry, dict):
+                    size_bytes = entry.get('disk_size', 0) or 0
+            installed = bool(root and glob.glob(os.path.join(root, f'goggame-{dlc_id}.info')))
+            out.append({
+                'Id': dlc_id,
+                'Title': title,
+                'Size': self.convert_bytes(int(size_bytes)) if size_bytes else '',
+                'Installed': installed,
+            })
+        print(f"[get_dlcs] {game_id}: {len(out)} DLC(s), root={root}", file=sys.stderr)
+        return json.dumps({'Type': 'DlcList', 'Content': {'Dlcs': out}})
+
+    @staticmethod
+    def _hashdb_files(hashdb_path, lenient=False):
+        """Extract the file paths recorded in a goggame-*.hashdb.
+        The hashdb is a ZIP (PK\\x03\\x04) wrapping a binary manifest. Each file entry
+        stores its MD5 as 32 ASCII-hex chars immediately followed by the Windows path
+        (e.g. '0007d98a...aac71Mod\\Player\\...\\x.png'), so a printable-ASCII run is
+        '<md5><path>'. Strip the leading 32-hex prefix, then keep path-like strings.
+
+        lenient=False (default): only CONCRETE files — a run with a path separator + a
+        file extension, or a bare filename + extension. These are the deletion candidates.
+        lenient=True: also include extensionless path/name tokens (e.g. Unity content-bin
+        files named by hash). Used to build the 'keep' set of base + other-DLC files; a
+        false positive here only PREVENTS a deletion, which is the safe direction."""
+        files = set()
+        if not os.path.isfile(hashdb_path):
+            return files
+        blob = b''
+        try:
+            with zipfile.ZipFile(hashdb_path) as z:
+                for name in z.namelist():
+                    blob += z.read(name)
+        except (zipfile.BadZipFile, OSError) as e:
+            print(f"[_hashdb_files] {hashdb_path}: {e}", file=sys.stderr)
+            return files
+        hex32_re = re.compile(r'^[0-9a-fA-F]{32}')
+        ext_re = re.compile(r'\.[A-Za-z0-9]{1,5}$')
+        name_re = re.compile(r'^[\w .\-()]+$')
+        for m in re.finditer(rb'[ -~]{4,}', blob):
+            s = m.group().decode('ascii', 'ignore').strip()
+            # Strip a leading MD5 (32 hex) if a real path/filename follows it.
+            if hex32_re.match(s) and len(s) > 32:
+                rest = s[32:]
+                if '\\' in rest or '/' in rest or name_re.match(rest):
+                    s = rest
+            has_sep = ('\\' in s or '/' in s)
+            if has_sep and ext_re.search(s):
+                files.add(s)
+            elif (not has_sep) and name_re.match(s) and ext_re.search(s):
+                files.add(s)
+            elif lenient and (has_sep or name_re.match(s)):
+                files.add(s)
+        return files
+
+    def remove_dlc(self, game_id, dlc_id):
+        """Remove an installed DLC's files without touching the base game or other DLCs.
+        File list comes from goggame-<dlcid>.hashdb; a file is deleted only if it is NOT
+        also referenced by the base game or any OTHER installed DLC hashdb. Then the
+        goggame-<dlcid>.* metadata is removed and now-empty dirs are pruned."""
+        game_id = str(game_id)
+        dlc_id = str(dlc_id)
+        root = self._game_root(game_id)
+        if not root or not os.path.isdir(root):
+            return json.dumps({'Type': 'Error', 'Content': {'Message': f'Game folder not found for {game_id}'}})
+
+        def norm(p):
+            return p.replace('\\', '/').lstrip('/').lower()
+
+        dlc_hashdb = os.path.join(root, f'goggame-{dlc_id}.hashdb')
+        dlc_files = self._hashdb_files(dlc_hashdb)
+        print(f"[remove_dlc] {game_id}/{dlc_id}: {len(dlc_files)} files from {dlc_hashdb}", file=sys.stderr)
+
+        # Paths owned by the base game + every OTHER DLC — these must be preserved.
+        # Use the LENIENT scan so extensionless base files (Unity content bins) are
+        # captured; over-inclusion here only protects files, never deletes them.
+        keep = set()
+        for hp in glob.glob(os.path.join(root, 'goggame-*.hashdb')):
+            if os.path.basename(hp) == f'goggame-{dlc_id}.hashdb':
+                continue
+            keep |= self._hashdb_files(hp, lenient=True)
+        keep_norm = {norm(x) for x in keep}
+
+        removed = 0
+        for rel in dlc_files:
+            if norm(rel) in keep_norm:
+                continue
+            parts = rel.replace('\\', '/').lstrip('/').split('/')
+            target = self._find_case_insensitive(os.path.join(root, *parts))
+            if os.path.isfile(target):
+                try:
+                    os.remove(target)
+                    removed += 1
+                except OSError as e:
+                    print(f"[remove_dlc] could not remove {target}: {e}", file=sys.stderr)
+
+        # Drop the DLC metadata files (info / hashdb / id / script).
+        for meta in glob.glob(os.path.join(root, f'goggame-{dlc_id}.*')):
+            try:
+                os.remove(meta)
+            except OSError:
+                pass
+
+        # Prune now-empty directories bottom-up (never the game root itself).
+        for dirpath, dirnames, filenames in os.walk(root, topdown=False):
+            if os.path.realpath(dirpath) == os.path.realpath(root):
+                continue
+            try:
+                if not os.listdir(dirpath):
+                    os.rmdir(dirpath)
+            except OSError:
+                pass
+
+        # Keep gogdl's manifest cache honest so a later reinstall re-downloads the DLC
+        # (otherwise gogdl diffs against a cache that still claims the DLC is present).
+        self._prune_dlc_from_gogdl_cache(game_id, dlc_id)
+
+        print(f"[remove_dlc] {game_id}/{dlc_id}: removed {removed} file(s)", file=sys.stderr)
+        return json.dumps({'Type': 'Success', 'Content': {
+            'Title': 'DLC Removed', 'Message': f'Removed DLC ({removed} files)'}})
+
+    @staticmethod
     def _find_case_insensitive(path):
         """Find a file by path using case-insensitive matching on each component.
         Returns the actual on-disk path, or the original path if not found."""
@@ -1045,6 +1245,24 @@ class GOG(GamesDb.GamesDb):
                             "Percentage": 0,
                             "Description": "Installation Failed.",
                             "Error": content
+                        }
+
+                    # gogdl's progress-bar worker can crash with "ValueError: Queue
+                    # ... is closed" the instant a download finishes (a race between
+                    # closing the write queue and the bar's final .get()). The game
+                    # files are fully written by then, but the traceback replaces the
+                    # final "Finished"/"All files look good" line, so otherwise the
+                    # frontend never sees 100% and the install hangs at 99% (finalize
+                    # never runs -> no shortcut). Treat the crash signature as done so
+                    # GOG_install's finalize proceeds; that step is gated on the
+                    # goggame-*.info file, which only exists on a completed download,
+                    # so a genuinely-incomplete download still can't produce a bad row.
+                    joined = ''.join(lines)
+                    crash_finish = "progressbar.py" in joined and "is closed" in joined
+                    if crash_finish and not (last_progress_update and last_progress_update.get("Error")):
+                        last_progress_update = {
+                            "Percentage": 100,
+                            "Description": "Download complete (finalizing)."
                         }
 
                     if last_progress_update is None:

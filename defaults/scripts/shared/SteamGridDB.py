@@ -1,5 +1,7 @@
 import json
+import re
 import sys
+import difflib
 import urllib.request
 import urllib.parse
 
@@ -35,8 +37,40 @@ class SteamGridDB:
             print(f"SteamGridDB API error ({endpoint}): {e}", file=sys.stderr)
         return None
 
+    @staticmethod
+    def _norm(s):
+        """Normalize a title for comparison: lowercase, drop everything non-alphanumeric,
+        and strip a trailing version tag (v1.2, 0.3.4, build junk) that repack folder
+        names often carry."""
+        s = (s or "").lower()
+        s = re.sub(r'[\s_\-]+v?\d+(\.\d+)*[a-z]?$', '', s)   # trailing version token
+        return re.sub(r'[^a-z0-9]', '', s)
+
+    @classmethod
+    def _name_matches(cls, query, candidate):
+        """Confident name-match guard. Only accept a SGDB candidate when we're sure it's
+        the same game, so we never apply someone else's cover art. Rules (query = our
+        title, candidate = SGDB name):
+          - exact normalized equality → accept
+          - candidate starts with query (SGDB carries a subtitle we lack, e.g. our
+            'Voronica Cleans House' vs 'Voronica Cleans House: a Vore Adventure')
+          - very high fuzzy ratio (punctuation/spacing differences only)
+        A minimum query length gates the prefix/fuzzy paths so short tokens like 'MMA'
+        can't latch onto 'MMA Simulator'."""
+        q, c = cls._norm(query), cls._norm(candidate)
+        if not q or not c:
+            return False
+        if q == c:
+            return True
+        if len(q) < 6:
+            return False
+        if c.startswith(q):
+            return True
+        return difflib.SequenceMatcher(None, q, c).ratio() >= 0.9
+
     def find_game(self, store_name, game_id, game_name):
-        """Find a game on SGDB. Tries platform ID first, falls back to name search."""
+        """Find a game on SGDB. Tries platform ID first, falls back to a NAME-guarded search
+        (only returns a hit whose name confidently matches — see _name_matches)."""
         platform = self.PLATFORM_MAP.get(store_name)
         if platform and game_id:
             encoded_id = urllib.parse.quote(str(game_id), safe="")
@@ -47,17 +81,28 @@ class SteamGridDB:
                     print(f"SteamGridDB: found game by platform {platform}/{game_id} → {sgdb_id}", file=sys.stderr)
                     return sgdb_id
 
-        # Fallback: search by name
+        # Fallback: search by name, but only accept a confident match. Scan all
+        # candidates (the right game isn't always the top autocomplete hit) and prefer
+        # an exact normalized match over a prefix/fuzzy one.
         if game_name:
             encoded_name = urllib.parse.quote(game_name, safe="")
             data = self._request(f"search/autocomplete/{encoded_name}")
-            if data and len(data) > 0:
-                sgdb_id = data[0].get("id")
-                if sgdb_id:
-                    print(f"SteamGridDB: found game by name '{game_name}' → {sgdb_id}", file=sys.stderr)
-                    return sgdb_id
+            if data:
+                fallback = None
+                for cand in data:
+                    name = cand.get("name", "")
+                    cid = cand.get("id")
+                    if not cid or not self._name_matches(game_name, name):
+                        continue
+                    if self._norm(game_name) == self._norm(name):
+                        print(f"SteamGridDB: name match '{game_name}' → '{name}' ({cid})", file=sys.stderr)
+                        return cid
+                    fallback = fallback or (cid, name)
+                if fallback:
+                    print(f"SteamGridDB: name match '{game_name}' → '{fallback[1]}' ({fallback[0]})", file=sys.stderr)
+                    return fallback[0]
 
-        print(f"SteamGridDB: no match for {store_name}/{game_id} '{game_name}'", file=sys.stderr)
+        print(f"SteamGridDB: no confident match for {store_name}/{game_id} '{game_name}'", file=sys.stderr)
         return None
 
     def get_images(self, sgdb_game_id):

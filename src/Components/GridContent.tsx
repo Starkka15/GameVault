@@ -1,5 +1,5 @@
 import { DialogButton, Focusable, Menu, MenuItem, Navigation, ProgressBar, ServerAPI, Spinner, TextField, gamepadTabbedPageClasses, showContextMenu, showModal } from "decky-frontend-lib";
-import { ContentResult, ContentType, ExecuteArgs, GameData, GameDataList, MenuAction, ScriptActions } from "../Types/Types";
+import { ContentResult, ContentType, ExecuteArgs, ExecuteGetGameDetailsArgs, GameData, GameDataList, GameImages, MenuAction, ScriptActions } from "../Types/Types";
 import { Dispatch, SetStateAction, VFC, memo, useEffect, useRef, useState } from "react";
 import GameGridItem from './GameGridItem';
 import { GameDetailsItem } from './GameDetailsItem';
@@ -45,6 +45,7 @@ export const GridContent: VFC<GridContentProps> = ({ content, serverAPI, initAct
     const [selectMode, setSelectMode] = useState(false);
     const [selectedGames, setSelectedGames] = useState<Set<string>>(new Set());
     const [queueState, setQueueState] = useState<QueueState>(installQueue.getState());
+    const [artworkBusy, setArtworkBusy] = useState(false);
 
     useEffect(() => {
         installQueue.setServerAPI(serverAPI);
@@ -91,9 +92,47 @@ export const GridContent: VFC<GridContentProps> = ({ content, serverAPI, initAct
         })();
     }, []);
 
+    // Bulk artwork: for every added game (has a Steam shortcut) in the current list,
+    // fetch SteamGridDB art by title (name-guarded in the backend) and apply it to the
+    // shortcut. Games with no confident SGDB match / no uploaded art are simply skipped.
+    const fetchAllArtwork = async () => {
+        if (artworkBusy) return;
+        const games = (content.Games ?? []).filter(g => g.SteamClientID);
+        if (games.length === 0) {
+            serverAPI.toaster.toast({ title: "GameVault", body: "No added games in view to fetch artwork for." });
+            return;
+        }
+        setArtworkBusy(true);
+        serverAPI.toaster.toast({ title: "GameVault", body: `Fetching artwork for ${games.length} game(s)…` });
+        let applied = 0;
+        for (const g of games) {
+            const id = parseInt(g.SteamClientID, 10);
+            if (Number.isNaN(id)) continue;
+            try {
+                const imageResult = await executeAction<ExecuteGetGameDetailsArgs, GameImages>(
+                    serverAPI, initActionSet, "GetJsonImages", { shortname: g.ShortName });
+                const images = imageResult?.Content;
+                if (!images) continue;
+                let any = false;
+                if (images.Grid) { await SteamClient.Apps.SetCustomArtworkForApp(id, images.Grid, 'png', 0); any = true; }
+                if (images.Hero) { await SteamClient.Apps.SetCustomArtworkForApp(id, images.Hero, 'png', 1); any = true; }
+                if (images.Logo) { await SteamClient.Apps.SetCustomArtworkForApp(id, images.Logo, 'png', 2); any = true; }
+                if (images.GridH) { await SteamClient.Apps.SetCustomArtworkForApp(id, images.GridH, 'png', 3); any = true; }
+                if (any) applied++;
+            } catch (e) {
+                logger.error(`artwork fetch failed for ${g.Name}`, e);
+            }
+        }
+        setArtworkBusy(false);
+        serverAPI.toaster.toast({ title: "GameVault", body: `Artwork applied to ${applied}/${games.length} game(s).` });
+    };
+
     const actionsMenu = (e: any) => {
         showContextMenu(
             <Menu label="Actions" cancelText="Cancel" onCancel={() => { }}>
+                <MenuItem disabled={artworkBusy} onSelected={fetchAllArtwork}>
+                    {artworkBusy ? "Fetching Artwork…" : "Fetch Artwork (SteamGridDB)"}
+                </MenuItem>
                 {scriptActions?.map((action) =>
                     <MenuItem
                         onSelected={async () => {

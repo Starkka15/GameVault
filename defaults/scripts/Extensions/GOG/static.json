@@ -311,6 +311,24 @@
           "Command": "./scripts/gamevault.sh GOG cancelinstall"
         },
         {
+          "Id": "GetDlcs",
+          "Title": "List DLCs",
+          "Type": "DlcList",
+          "Command": "./scripts/gamevault.sh GOG getdlcs"
+        },
+        {
+          "Id": "InstallDlc",
+          "Title": "Install DLC",
+          "Type": "Download",
+          "Command": "./scripts/gamevault.sh GOG installdlc"
+        },
+        {
+          "Id": "RemoveDlc",
+          "Title": "Remove DLC",
+          "Type": "ScriptAction",
+          "Command": "./scripts/gamevault.sh GOG removedlc"
+        },
+        {
           "Id": "GetLoginActions",
           "Title": "Get login status",
           "Type": "Init",

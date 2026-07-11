@@ -543,7 +543,12 @@ class GameSet:
         return json.dumps({'Type': 'Images', 'Content': {'Grid': tallImage, 'GridH': wideImage, 'Hero': wideImage, 'Logo': tallImage}})
 
     def download(self, url):
-        response = urllib.request.urlopen(url).read()
+        # SteamGridDB's CDN (cdn2.steamgriddb.com) 403s requests without a browser-like
+        # User-Agent, so send one. urllib ignores headers for file:// URLs (local icons),
+        # so this is safe for both remote art and on-disk images.
+        req = urllib.request.Request(
+            url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) GameVault/1.0"})
+        response = urllib.request.urlopen(req, timeout=20).read()
         encoded_data = base64.b64encode(response).decode('utf-8')
         return encoded_data
 

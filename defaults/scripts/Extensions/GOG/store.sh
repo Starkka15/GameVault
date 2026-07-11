@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Register actions with the gamevault.sh script
-ACTIONS+=("update-umu-id" "download-saves" "upload-saves" "toggle-autosync" "lookup-protonfixes" "apply-protonfixes" "retrodetect-game-types")
+ACTIONS+=("update-umu-id" "download-saves" "upload-saves" "toggle-autosync" "lookup-protonfixes" "apply-protonfixes" "retrodetect-game-types" "getdlcs" "installdlc" "removedlc")
 
 # Register GOG as a platform with the gamevault.sh script
 PLATFORMS+=("GOG")
@@ -77,10 +77,42 @@ function GOG_cancelinstall(){
 function GOG_download(){
     PROGRESS_LOG="${DECKY_PLUGIN_LOG_DIR}/${1}.progress"
     mkdir -p "${INSTALL_DIR}"
-    gogupdategamedetailsaftercmd $1 $GOGDL --auth-config-path "${AUTH_TOKENS}" download $1 --platform windows --path "${INSTALL_DIR}" --lang "${GOG_LANGUAGE:-en}" --with-dlcs 2> $PROGRESS_LOG > "${DECKY_PLUGIN_LOG_DIR}/${1}.output" &
+    # GOG_INSTALLDLCS (from the "Install DLCs with game" tab setting): "true" grabs all
+    # DLCs with the base game (default); anything else installs base-only so DLCs can be
+    # added one-by-one later via the DLC manager. --skip-dlcs is gogdl's explicit "no DLCs".
+    if [[ "${GOG_INSTALLDLCS:-true}" == "true" ]]; then
+        DLC_FLAG="--with-dlcs"
+    else
+        DLC_FLAG="--skip-dlcs"
+    fi
+    gogupdategamedetailsaftercmd $1 $GOGDL --auth-config-path "${AUTH_TOKENS}" download $1 --platform windows --path "${INSTALL_DIR}" --lang "${GOG_LANGUAGE:-en}" ${DLC_FLAG} 2> $PROGRESS_LOG > "${DECKY_PLUGIN_LOG_DIR}/${1}.output" &
     echo $! > "${DECKY_PLUGIN_LOG_DIR}/${1}.pid"
     echo "{\"Type\": \"Progress\", \"Content\": {\"Message\": \"Downloading\"}}"
 
+}
+
+function GOG_getdlcs(){
+    $GOGCONF --getdlcs "${1}" --dbfile "$DBFILE"
+}
+
+function GOG_installdlc(){
+    # $1 = game id (short name), $2 = dlc id. Downloads just this DLC into the
+    # existing install (gogdl verifies/skips already-present base chunks). Reuses
+    # the game's own .progress file so the existing GetProgress polling tracks it.
+    PROGRESS_LOG="${DECKY_PLUGIN_LOG_DIR}/${1}.progress"
+    mkdir -p "${INSTALL_DIR}"
+    # gogdl gotcha: --dlcs is only a FILTER; the DLC-download enable flag lives on
+    # --with-dlcs (shared dest 'dlcs'). Without --with-dlcs, get_dlcs_user_owns()
+    # short-circuits to [] ("Owned dlcs []" -> "Nothing to do"). Pass BOTH: enable
+    # DLC downloading, then restrict it to just this one DLC id.
+    $GOGDL --auth-config-path "${AUTH_TOKENS}" download $1 --platform windows --path "${INSTALL_DIR}" --lang "${GOG_LANGUAGE:-en}" --with-dlcs --dlcs "${2}" 2> $PROGRESS_LOG > "${DECKY_PLUGIN_LOG_DIR}/${1}.output" &
+    echo $! > "${DECKY_PLUGIN_LOG_DIR}/${1}.pid"
+    echo "{\"Type\": \"Progress\", \"Content\": {\"Message\": \"Installing DLC\"}}"
+}
+
+function GOG_removedlc(){
+    # $1 = game id, $2 = dlc id. Deletes the DLC's files (not shared with base/other DLCs).
+    $GOGCONF --removedlc "${1}" "${2}" --dbfile "$DBFILE"
 }
 
 function GOG_update(){

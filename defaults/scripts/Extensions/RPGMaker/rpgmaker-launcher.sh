@@ -28,6 +28,9 @@ GAME_DIR=$($RPGMAKERCONF --get-game-dir "$ID" --dbfile "$DBFILE")
 if [ -z "$ENGINE" ]; then
     ENGINE=$($RPGMAKERCONF --get-args "$ID" --dbfile "$DBFILE")
 fi
+# Entrypoint relative to the game folder (Linux binary / Electron index). Only the
+# native-launcher engines route through here; scummvm/dos/windows launch directly.
+APP_REL=$($RPGMAKERCONF --get-app-path "$ID" --dbfile "$DBFILE")
 
 RT="$RPGMAKER_RUNTIME"
 NW="$RT/nwjs/nw"
@@ -42,7 +45,10 @@ NW="$RT/nwjs/nw"
 #      (radeonsi) ANGLE backend. --in-process-gpu removes the crashing GPU-IPC boundary;
 #      --use-angle=gl avoids the vulkan-in-process conflict. Still hardware (radeonsi).
 # Override per-game via RPGMAKER_NW_FLAGS in the Steam launch options if one misbehaves.
-NW_FLAGS="${RPGMAKER_NW_FLAGS:---ignore-gpu-blocklist --enable-webgl --in-process-gpu --use-gl=angle --use-angle=gl}"
+# --enable-logging=stderr surfaces the page's console (WebGL/plugin errors) into the run
+# log — kept in as a diagnostic. A game folder may also carry gv_nwflags.txt to fully
+# replace these flags for just that game (see run_nw).
+NW_FLAGS="${RPGMAKER_NW_FLAGS:---ignore-gpu-blocklist --enable-webgl --in-process-gpu --use-gl=angle --use-angle=gl --enable-logging=stderr --log-level=0}"
 
 run_nw(){
     # Linux is case-sensitive but RPG Maker data often references assets with
@@ -80,8 +86,15 @@ try: open(p, 'w', encoding='utf-8').write(out)
 except Exception: pass
 PY
     fi
-    # shellcheck disable=SC2086  # NW_FLAGS must word-split into separate args
-    exec "$NW" $NW_FLAGS "$GAME_DIR" >> "$LOG" 2>&1
+    # Per-game override: a gv_nwflags.txt in the game folder fully replaces NW_FLAGS
+    # for just this game (some games need a different GL/GPU path than the default).
+    local flags="$NW_FLAGS"
+    if [ -f "$GAME_DIR/gv_nwflags.txt" ]; then
+        flags="$(tr '\r\n' '  ' < "$GAME_DIR/gv_nwflags.txt")"
+        echo "per-game NW flags: $flags" >> "$LOG"
+    fi
+    # shellcheck disable=SC2086  # flags must word-split into separate args
+    exec "$NW" $flags "$GAME_DIR" >> "$LOG" 2>&1
 }
 # mkxp-z: run the extracted binary directly (the AppImage's AppRun hardcodes usr/bin/mkxp-z
 # but the binary sits at the AppDir root). Replicate AppRun's env: bundled libs + SRCDIR=cwd.
@@ -121,6 +134,32 @@ run_mkxpz(){
     exec env LD_LIBRARY_PATH="${MKXPZ_LIBS}:${LD_LIBRARY_PATH}" SRCDIR="$GAME_DIR" "$MKXPZ_BIN" >> "$LOG" 2>&1
 }
 
+run_linux(){
+    cd "$GAME_DIR" || exit 1
+    local app="$APP_REL"
+    if [ -z "$app" ]; then
+        # Fallback sniff: prefer a Unity .x86_64, else a .sh launcher.
+        app=$(basename "$(ls -1 "$GAME_DIR"/*.x86_64 2>/dev/null | head -1)" 2>/dev/null)
+        [ -z "$app" ] && app=$(basename "$(ls -1 "$GAME_DIR"/*.sh 2>/dev/null | head -1)" 2>/dev/null)
+    fi
+    local exe="$GAME_DIR/$app"
+    if [ ! -f "$exe" ]; then
+        echo "linux entrypoint not found: $exe" >> "$LOG"
+        exit 1
+    fi
+    chmod +x "$exe" 2>/dev/null
+    echo "linux exec: $exe" >> "$LOG"
+    exec "$exe" >> "$LOG" 2>&1
+}
+
+run_electron(){
+    # NW.js-packaged HTML games (package.nw / resources/app / index.html+package.json)
+    # run under the bundled NW.js runtime, same Chromium GL flags as MV/MZ.
+    echo "electron/nwjs exec on: $GAME_DIR" >> "$LOG"
+    # shellcheck disable=SC2086  # NW_FLAGS must word-split
+    exec "$NW" $NW_FLAGS "$GAME_DIR" >> "$LOG" 2>&1
+}
+
 case "$ENGINE" in
   mv|mz)
     run_nw
@@ -128,9 +167,16 @@ case "$ENGINE" in
   vxace|xp|vx)
     run_mkxpz
     ;;
+  linux)
+    run_linux
+    ;;
+  electron)
+    run_electron
+    ;;
   *)
-    # Fallback: sniff the folder if the engine tag is missing.
-    if [ -f "$GAME_DIR/package.json" ]; then
+    # Fallback: sniff the folder if the engine tag is missing. scummvm/dos/windows
+    # never reach here (they launch via flatpak / Proton directly).
+    if [ -f "$GAME_DIR/package.json" ] || [ -f "$GAME_DIR/www/index.html" ]; then
         run_nw
     else
         run_mkxpz

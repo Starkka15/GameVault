@@ -45,7 +45,7 @@
     "Type": "StoreTabs",
     "Content": {
       "Tabs": [
-        { "Title": "RPG Maker", "Type": "GameGrid", "ActionId": "GetRPGMakerActions" }
+        { "Title": "My Added Games", "Type": "GameGrid", "ActionId": "GetRPGMakerActions" }
       ]
     }
   },

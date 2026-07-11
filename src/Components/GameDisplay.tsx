@@ -23,6 +23,7 @@ import { ConfEditor } from "../ConfEditor";
 import { BatEditor } from "../BatEditor";
 import Logger from "../Utils/logger";
 import { ExeRunner } from "../ExeRunner";
+import { DlcManager } from "../DlcManager";
 import { getAppDetails } from '../Utils/utils';
 import { ScrollableWindow } from '../ScrollableWindow';
 import { appActionButtonClasses, basicAppDetailsClasses } from '../staticClasses';
@@ -123,6 +124,11 @@ const GameDisplay: VFC<GameDisplayProperties> = (
                 <MenuItem onSelected={() => showModal(<ConfirmModal strTitle="Confirm" strDescription={"Uninstall " + name + "?"} onOK={() => { uninstaller(); }} />)}> {/*pass uninstall fn like this so it doesn't wait for the async fn to close the modal */}
                     Uninstall Game
                 </MenuItem>
+                {isInstalled && initActionSet === 'GOGActions' &&
+                    <MenuItem onSelected={() => showModal(<DlcManager serverAPI={serverApi} initActionSet={initActionSet} shortName={shortName} name={name} refreshParent={reloadData} />)}>
+                        Install/Remove DLCs
+                    </MenuItem>
+                }
                 {actions && actions.length > 0 && actions.map((action) => {
                     const mustBeInstalled = action.InstalledOnly != undefined && action.InstalledOnly == true;
                     const show = isInstalled || !mustBeInstalled;

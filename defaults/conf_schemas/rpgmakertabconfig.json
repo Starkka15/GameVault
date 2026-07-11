@@ -3,13 +3,13 @@
     {
       "Name": "RPGMaker",
       "Visible": true,
-      "Description": "Settings for the RPG Maker games folder. Copy your RPG Maker MV/MZ/VX Ace game folders into the games location below, then Rescan.",
+      "Description": "Settings for the My Added Games folder. Drop game folders (RPG Maker, ScummVM, DOS, Linux, Electron or Windows) into the games location below, then Rescan. Add a one-word .gvengine file in a game folder to override auto-detection.",
       "ModeLevel": 0,
       "Options": [
         {
           "Key": "InstallLocation",
           "Label": "Games Location",
-          "Description": "Where your RPG Maker game folders live. Games are scanned from Games/RPGMaker/ under this location.",
+          "Description": "Where your added game folders live. Games are scanned from Games/AddedGames/ under this location.",
           "DefaultValue": "SSD",
           "Value": "SSD",
           "Type": "Enum",

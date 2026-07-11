@@ -50,22 +50,28 @@ class GamesDb(GameSet.GameSet):
         game_title = None
         game_db_id = None
 
+        def _try_download(url):
+            try:
+                return self.download(url)
+            except Exception as e:
+                print(f"image download failed ({url}): {e}", file=sys.stderr)
+                return None
+
         for row in c.fetchall():
             image = row['ImagePath']
             if game_title is None:
                 game_title = row['Title']
                 game_db_id = row['GameDBID']
             print(f"{row['Type']}: {image}", file=sys.stderr)
+            # Map SGDB/local image types to Steam artwork slots (Grid=portrait capsule,
+            # Hero=banner, Logo=logo). square_icon is the local tile icon, not a Steam
+            # cover, so it doesn't feed any of these slots.
             if row['Type'] == 'vertical_cover':
-                grid = self.download(image)
-
+                grid = _try_download(image)
             elif row['Type'] == 'horizontal_artwork':
-                heroImage = self.download(image)
-
+                heroImage = _try_download(image)
             elif row['Type'] == 'logo':
-                gridH = self.download(image)
-            elif row['Type'] == 'square_icon':
-                logo = self.download(image)
+                logo = _try_download(image)
 
         # If we didn't get a title from the Images join, fetch it directly
         if game_title is None:
@@ -75,16 +81,15 @@ class GamesDb(GameSet.GameSet):
                 game_title = row['Title']
                 game_db_id = row['ID']
 
-        # SteamGridDB fallback for missing image slots
+        # SteamGridDB fallback for missing image slots (grid/hero/logo — the slots with a
+        # clear SGDB source). GridH (landscape capsule) has no source here and stays empty.
         missing = {}
         if grid is None:
             missing['vertical_cover'] = 0
         if heroImage is None:
             missing['horizontal_artwork'] = 1
-        if gridH is None:
-            missing['logo'] = 1
         if logo is None:
-            missing['square_icon'] = 1
+            missing['logo'] = 2
 
         if missing and game_title:
             api_key = self._read_sgdb_key()
@@ -96,24 +101,26 @@ class GamesDb(GameSet.GameSet):
                         sgdb_images = sgdb.get_images(sgdb_id)
                         for img_type, sort_order in missing.items():
                             url = sgdb_images.get(img_type)
-                            if url:
-                                print(f"SteamGridDB filling {img_type}: {url}", file=sys.stderr)
-                                b64 = self.download(url)
-                                if img_type == 'vertical_cover':
-                                    grid = b64
-                                elif img_type == 'horizontal_artwork':
-                                    heroImage = b64
-                                elif img_type == 'logo':
-                                    gridH = b64
-                                elif img_type == 'square_icon':
-                                    logo = b64
-                                # Cache URL in Images table
-                                if game_db_id is not None:
-                                    try:
-                                        c.execute("INSERT INTO Images (GameID, ImagePath, FileName, SortOrder, Type) VALUES (?, ?, ?, ?, ?)",
-                                                  (game_db_id, url, '', sort_order, img_type))
-                                    except Exception as e:
-                                        print(f"SteamGridDB cache insert error: {e}", file=sys.stderr)
+                            if not url:
+                                continue
+                            print(f"SteamGridDB filling {img_type}: {url}", file=sys.stderr)
+                            # Per-image isolation: one CDN failure must not abort the rest.
+                            b64 = _try_download(url)
+                            if not b64:
+                                continue
+                            if img_type == 'vertical_cover':
+                                grid = b64
+                            elif img_type == 'horizontal_artwork':
+                                heroImage = b64
+                            elif img_type == 'logo':
+                                logo = b64
+                            # Cache URL in Images table
+                            if game_db_id is not None:
+                                try:
+                                    c.execute("INSERT INTO Images (GameID, ImagePath, FileName, SortOrder, Type) VALUES (?, ?, ?, ?, ?)",
+                                              (game_db_id, url, '', sort_order, img_type))
+                                except Exception as e:
+                                    print(f"SteamGridDB cache insert error: {e}", file=sys.stderr)
                         conn.commit()
                 except Exception as e:
                     print(f"SteamGridDB fallback error: {e}", file=sys.stderr)

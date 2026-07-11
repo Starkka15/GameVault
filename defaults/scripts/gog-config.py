@@ -56,6 +56,10 @@ class GOGArgs(GameSet.GenericArgs):
             '--get-game-type', help='Get game type (windows/dosbox/scummvm)')
         self.parser.add_argument(
             '--retrodetect', help='Retrodetect game types for installed games', action='store_true')
+        self.parser.add_argument(
+            '--getdlcs', help='List DLCs for a game (installed state included)')
+        self.parser.add_argument(
+            '--removedlc', nargs=2, help='Remove an installed DLC: <game_id> <dlc_id>')
 
     def parseArgs(self):
         super().parseArgs()
@@ -116,6 +120,11 @@ class GOGArgs(GameSet.GenericArgs):
                 print(self.gameSet.get_game_type(self.args.get_game_type))
             if self.args.retrodetect:
                 self.gameSet.retrodetect_game_types()
+            if self.args.getdlcs:
+                print(self.gameSet.get_dlcs(self.args.getdlcs))
+            if self.args.removedlc:
+                print(self.gameSet.remove_dlc(
+                    self.args.removedlc[0], self.args.removedlc[1]))
             if not any(vars(self.args).values()):
                 self.parser.print_help()
         except gog.CmdException as e:
