@@ -168,8 +168,11 @@ class Itchio(GamesDb.GamesDb):
         conn.close()
 
     def _get_collections(self):
-        """List the user's itch.io collections ({id, title}), paginated."""
+        """List the user's itch.io collections ({id, title}). NOTE: the profile/collections
+        endpoint ignores ?page and returns the full list every time, so we terminate when a
+        page yields no NEW collection ids (works whether or not it actually paginates)."""
         collections = []
+        seen = set()
         page = 1
         while True:
             try:
@@ -186,7 +189,12 @@ class Itchio(GamesDb.GamesDb):
                 cols = list(cols.values())
             if not cols:
                 break
-            collections.extend(cols)
+            new = [c for c in cols if isinstance(c, dict) and c.get('id') not in seen]
+            if not new:
+                break
+            for c in new:
+                seen.add(c.get('id'))
+            collections.extend(new)
             page += 1
         return collections
 
@@ -194,6 +202,7 @@ class Itchio(GamesDb.GamesDb):
         """All game objects in a collection (paginated). Each collection-game entry wraps
         a full 'game' object (id/title/cover_url/short_text) — same shape as owned-keys."""
         games = []
+        seen = set()
         page = 1
         while True:
             try:
@@ -208,10 +217,16 @@ class Itchio(GamesDb.GamesDb):
                 entries = list(entries.values())
             if not entries:
                 break
+            added = 0
             for entry in entries:
                 g = entry.get('game') if isinstance(entry, dict) else None
-                if g and g.get('id'):
+                gid = g.get('id') if g else None
+                if gid and gid not in seen:
+                    seen.add(gid)
                     games.append(g)
+                    added += 1
+            if added == 0:   # page repeated / no new games -> stop
+                break
             page += 1
         return games
 
