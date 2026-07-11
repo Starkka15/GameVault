@@ -180,6 +180,10 @@ class Itchio(GamesDb.GamesDb):
                 print(f"Error fetching collections page {page}: {e}", file=sys.stderr)
                 break
             cols = data.get('collections', [])
+            # itch's PHP API serializes an empty array as {} and may key results by id;
+            # accept either a list or a dict-of-objects.
+            if isinstance(cols, dict):
+                cols = list(cols.values())
             if not cols:
                 break
             collections.extend(cols)
@@ -200,10 +204,12 @@ class Itchio(GamesDb.GamesDb):
                 print(f"Error fetching collection {collection_id} page {page}: {e}", file=sys.stderr)
                 break
             entries = data.get('collection_games', [])
+            if isinstance(entries, dict):
+                entries = list(entries.values())
             if not entries:
                 break
             for entry in entries:
-                g = entry.get('game')
+                g = entry.get('game') if isinstance(entry, dict) else None
                 if g and g.get('id'):
                     games.append(g)
             page += 1
