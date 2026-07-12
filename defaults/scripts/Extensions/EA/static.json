@@ -1,0 +1,298 @@
+{
+  "gamevault-actions": {
+    "Type": "ActionSet",
+    "Content": {
+      "SetName": "GameVaultActions",
+      "Actions": [
+        {
+          "Id": "GetEAActions",
+          "Title": "Get EA Play store actions",
+          "Type": "Init",
+          "Command": "./scripts/get-json.py ea-actions"
+        }
+      ]
+    }
+  },
+  "gamevault-actions-no-tabs": {
+    "Type": "ActionSet",
+    "Content": {
+      "SetName": "GameVaultActionsNoTabs",
+      "Actions": [
+        {
+          "Id": "GetEAActions",
+          "Title": "Get EA Play store actions",
+          "Type": "Init",
+          "Command": "./scripts/get-json.py ea-actions"
+        }
+      ]
+    }
+  },
+  "main-menu-actions": {
+    "Type": "ActionSet",
+    "Content": {
+      "SetName": "MainMenu",
+      "Actions": [
+        {
+          "Id": "GetEAActions",
+          "Title": "Get EA Play store actions",
+          "Type": "Init",
+          "Command": "./scripts/get-json.py ea-actions"
+        }
+      ]
+    }
+  },
+  "gamevault-tabs": {
+    "Type": "StoreTabs",
+    "Content": {
+      "Tabs": [
+        { "Title": "EA Play", "Type": "GameGrid", "ActionId": "GetEAActions" }
+      ]
+    }
+  },
+  "ea-games-login-actions": {
+    "Type": "ActionSet",
+    "Content": {
+      "SetName": "EAGamesLoginActions",
+      "Actions": [
+        {
+          "Id": "Login",
+          "Title": "Login",
+          "Type": "Login",
+          "Command": "./scripts/gamevault.sh EA login"
+        },
+        {
+          "Id": "LoginLaunchOptions",
+          "Title": "Login",
+          "Type": "Login",
+          "Command": "./scripts/gamevault.sh EA login-launch-options"
+        },
+        {
+          "Id": "Logout",
+          "Title": "Logout",
+          "Type": "Logout",
+          "Command": "./scripts/gamevault.sh EA logout"
+        },
+        {
+          "Id": "GetContent",
+          "Title": "Status",
+          "Type": "Status",
+          "Command": "./scripts/gamevault.sh EA loginstatus"
+        },
+        {
+          "Id": "GetSetting",
+          "Title": "Get settings",
+          "Type": "GetSettings",
+          "Command": "./scripts/gamevault.sh EA getsetting"
+        },
+        {
+          "Id": "SaveSetting",
+          "Title": "Set settings",
+          "Type": "SaveSettings",
+          "Command": "./scripts/gamevault.sh EA savesetting"
+        }
+      ]
+    }
+  },
+  "ea-game-script-actions": {
+    "Type": "ScriptSet",
+    "Content": {
+      "Actions": [
+        {
+          "ActionId": "UmuIdUpdate",
+          "Title": "Update UMU Id",
+          "Type": "ScriptAction",
+          "InstalledOnly": "True"
+        }
+      ]
+    }
+  },
+  "ea-script-actions": {
+    "Type": "ScriptSet",
+    "Content": {
+      "Actions": [
+        {
+          "ActionId": "Refresh",
+          "Title": "Refresh Games List",
+          "Type": "ScriptAction",
+          "InstalledOnly": "False"
+        }
+      ]
+    }
+  },
+  "ea-exe-actions": {
+    "Type": "ActionSet",
+    "Content": {
+      "SetName": "EAExeActions",
+      "Actions": [
+        {
+          "Id": "RunBinary",
+          "Title": "Run executable in game folder",
+          "Type": "ScriptAction",
+          "Command": "./scripts/gamevault.sh EA run-exe"
+        },
+        {
+          "Id": "GetContent",
+          "Title": "Get executable list",
+          "Type": "Content",
+          "Command": "./scripts/gamevault.sh EA get-exe-list"
+        }
+      ]
+    }
+  },
+  "ea-config-actions": {
+    "Type": "ActionSet",
+    "Content": {
+      "SetName": "EAPlatformConfigFileActions",
+      "Actions": [
+        {
+          "Id": "GetContent",
+          "Title": "Get the ini files as json",
+          "Type": "IniEditor",
+          "Command": "./scripts/gamevault.sh EA getplatformconfig"
+        },
+        {
+          "Id": "SaveContent",
+          "Title": "Save the ini files as json",
+          "Type": "IniEditor",
+          "Command": "./scripts/gamevault.sh EA saveplatformconfig"
+        }
+      ]
+    }
+  },
+  "ea-tab-config-actions": {
+    "Type": "ActionSet",
+    "Content": {
+      "SetName": "EATabConfigEditor",
+      "Actions": [
+        {
+          "Id": "GetContent",
+          "Title": "Get the ini files as json",
+          "Type": "IniEditor",
+          "Command": "./scripts/gamevault.sh EA gettabconfig"
+        },
+        {
+          "Id": "SaveContent",
+          "Title": "Save the ini files as json",
+          "Type": "IniEditor",
+          "Command": "./scripts/gamevault.sh EA savetabconfig"
+        }
+      ]
+    }
+  },
+  "ea-actions": {
+    "Type": "ActionSet",
+    "Content": {
+      "SetName": "EAActions",
+      "Actions": [
+        {
+          "Id": "GetContent",
+          "Title": "Get EA Play games list",
+          "Type": "GameGrid",
+          "Command": "./scripts/gamevault.sh EA getgames"
+        },
+        {
+          "Id": "GetGameSize",
+          "Title": "Get game size",
+          "Type": "GameSize",
+          "Command": "./scripts/gamevault.sh EA getgamesize"
+        },
+        {
+          "Id": "GetDetails",
+          "Title": "Get game details",
+          "Type": "GameDetails",
+          "Command": "./scripts/gamevault.sh EA getgamedetails"
+        },
+        {
+          "Id": "GetJsonImages",
+          "Title": "Get game images as json",
+          "Type": "GameImages",
+          "Command": "./scripts/gamevault.sh EA getjsonimages"
+        },
+        {
+          "Id": "Install",
+          "Title": "Install game",
+          "Type": "Install",
+          "Command": "./scripts/gamevault.sh EA install"
+        },
+        {
+          "Id": "Download",
+          "Title": "Download game",
+          "Type": "Download",
+          "Command": "./scripts/gamevault.sh EA download"
+        },
+        {
+          "Id": "Uninstall",
+          "Title": "Uninstall game",
+          "Type": "Uninstall",
+          "Command": "./scripts/gamevault.sh EA uninstall"
+        },
+        {
+          "Id": "GetProgress",
+          "Title": "Get install progress",
+          "Type": "GetProgress",
+          "Command": "./scripts/gamevault.sh EA getprogress"
+        },
+        {
+          "Id": "CancelInstall",
+          "Title": "Cancel install",
+          "Type": "CancelInstall",
+          "Command": "./scripts/gamevault.sh EA cancelinstall"
+        },
+        {
+          "Id": "GetLoginActions",
+          "Title": "Get login status",
+          "Type": "Init",
+          "Command": "./scripts/get-json.py ea-games-login-actions"
+        },
+        {
+          "Id": "GetLaunchOptions",
+          "Title": "Get launch options",
+          "Type": "GetLaunchOptions",
+          "Command": "./scripts/gamevault.sh EA getlaunchoptions"
+        },
+        {
+          "Id": "GetExeActions",
+          "Title": "Get executable action set to run exe's in game dir",
+          "Type": "Init",
+          "Command": "./scripts/get-json.py ea-exe-actions"
+        },
+        {
+          "Id": "GetGameScriptActions",
+          "Title": "",
+          "Type": "ScriptActions",
+          "Command": "./scripts/get-json.py ea-game-script-actions"
+        },
+        {
+          "Id": "GetScriptActions",
+          "Title": "",
+          "Type": "ScriptActions",
+          "Command": "./scripts/get-json.py ea-script-actions"
+        },
+        {
+          "Id": "GetPlatformConfigFileActions",
+          "Title": "Get config file actions",
+          "Type": "Init",
+          "Command": "./scripts/get-json.py ea-config-actions"
+        },
+        {
+          "Id": "GetTabConfigActions",
+          "Title": "Get EA tab config file actions",
+          "Type": "Init",
+          "Command": "./scripts/get-json.py ea-tab-config-actions"
+        },
+        {
+          "Id": "Refresh",
+          "Title": "Refresh Games List",
+          "Type": "Refresh",
+          "Command": "./scripts/gamevault.sh EA refresh"
+        },
+        {
+          "Id": "UmuIdUpdate",
+          "Title": "Update UMU Id",
+          "Type": "Executable",
+          "Command": "./scripts/gamevault.sh EA update-umu-id"
+        }
+      ]
+    }
+  }
+}
