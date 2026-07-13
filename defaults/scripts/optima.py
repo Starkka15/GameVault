@@ -334,29 +334,43 @@ class Optima(GamesDb.GamesDb):
             is_complete = False
             is_error = False
             error_line = ""
-            for line in lines[-6:]:
-                ll = line.strip().lower()
+            for line in lines[-8:]:
+                ls = line.strip()
+                ll = ls.lower()
                 if ll.startswith("installed ") and " to " in ll:
                     is_complete = True
                     break
-                if "error" in ll or "failed after" in ll or "bail" in ll:
+                # ONLY terminal failures. optima-cli retries demux drops itself
+                # (`[install] run failed (...); reconnecting demux and resuming`)
+                # and resumes — those lines are NOT fatal and must be ignored, or
+                # the UI reports "failed" mid-download and the user re-taps (which
+                # spawns a racing 2nd install). A real terminal error is anyhow's
+                # top-level `Error:` line or the retry-cap message.
+                if ll.startswith("[install]"):
+                    continue
+                if (ll.startswith("error:")
+                        or "failed after 30 whole-run retries" in ll
+                        or "is not in your owned games" in ll
+                        or "no ubisoft cdn build" in ll):
                     is_error = True
-                    error_line = line.strip()
+                    error_line = ls
 
             if is_complete:
                 last_progress_update = {"Percentage": 100, "Description": "Installation complete"}
+            elif is_error:
+                last_progress_update = {
+                    "Percentage": 0, "Description": "Installation Failed.", "Error": error_line
+                }
             elif total > 0:
                 percent = min(99, (done / total) * 100.0)
                 last_progress_update = {
                     "Percentage": percent,
                     "Description": f"Downloading files {done} / {total} ({percent:.1f}%)"
                 }
-            elif is_error:
-                last_progress_update = {
-                    "Percentage": 0, "Description": "Installation Failed.", "Error": error_line
-                }
-            elif lines:
-                last_progress_update = {"Percentage": 0, "Description": lines[-1].strip()}
+            else:
+                # Manifest signed, files not yet counted (big first files). Show
+                # activity rather than the raw last log line (retry chatter).
+                last_progress_update = {"Percentage": 0, "Description": "Preparing download…"}
         except Exception as e:
             print("Waiting for progress update", e, file=sys.stderr)
             time.sleep(1)

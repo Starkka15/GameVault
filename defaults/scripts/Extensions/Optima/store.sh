@@ -63,6 +63,18 @@ function Optima_cancelinstall(){
 
 function Optima_download(){
     PROGRESS_LOG="${DECKY_PLUGIN_LOG_DIR}/${1}.progress"
+    PID_FILE="${DECKY_PLUGIN_LOG_DIR}/${1}.pid"
+    # Guard: if an install for this product is already running, DON'T spawn a
+    # second one. Two optima-cli writers race on the same .optima-part files and
+    # one renames a temp out from under the other → "No such file or directory
+    # (os error 2)". Re-taps (e.g. after a transient progress blip) must be no-ops.
+    if [[ -f "${PID_FILE}" ]]; then
+        OLD_PID=$(cat "${PID_FILE}" 2>/dev/null)
+        if [[ -n "${OLD_PID}" ]] && kill -0 "${OLD_PID}" 2>/dev/null; then
+            echo "{\"Type\": \"Progress\", \"Content\": {\"Message\": \"Downloading\"}}"
+            return
+        fi
+    fi
     GAME_PATH="${INSTALL_DIR}/${1}"
     mkdir -p "${GAME_PATH}"
     # optima-cli writes its per-file progress ("[i/N] name") to stdout.
