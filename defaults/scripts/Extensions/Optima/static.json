@@ -77,6 +77,12 @@
           "Command": "./scripts/gamevault.sh Optima logout"
         },
         {
+          "Id": "Renew",
+          "Title": "Renew Ticket",
+          "Type": "Login",
+          "Command": "./scripts/gamevault.sh Optima renew"
+        },
+        {
           "Id": "GetContent",
           "Title": "Status",
           "Type": "Status",

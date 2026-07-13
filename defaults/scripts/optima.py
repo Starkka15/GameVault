@@ -216,16 +216,40 @@ class Optima(GamesDb.GamesDb):
         auth_file = os.path.expanduser('~/.local/share/optima/auth.toml')
         if os.path.exists(auth_file):
             username = "Ubisoft User"
+            # `whoami` live-verifies the ticket against UbiServices. Trust that
+            # live check — NOT mere file existence — so an expired/dead session
+            # actually surfaces (LoggedIn=False → the UI shows the sign-in button,
+            # which re-opens the browser and grabs a fresh ticket = renewal). The
+            # WebAuth login stores no rememberMe, so the browser is the only
+            # renewal path; if we reported LoggedIn=True on a dead ticket, every
+            # online action would silently fail with no way to recover from the UI.
+            live_ok = True  # benefit of the doubt if whoami itself won't run
+            saw_live_check = False
             try:
                 output = self.execute_shell(f"{self.optima_cmd} whoami")
                 for line in output.split('\n'):
                     m = re.match(r'\s*name:\s*(.+)$', line)
                     if m and m.group(1).strip():
                         username = m.group(1).strip()
-                        break
+                    if 'live check:' in line.lower():
+                        saw_live_check = True
+                        live_ok = 'live check: ok' in line.lower()
             except Exception as e:
                 print(f"whoami failed: {e}", file=sys.stderr)
-            value = json.dumps({'Type': 'LoginStatus', 'Content': {'Username': username, 'LoggedIn': True}})
+            if live_ok:
+                value = json.dumps({'Type': 'LoginStatus', 'Content': {'Username': username, 'LoggedIn': True}})
+            else:
+                # Dead session — present as logged out so the sign-in (renew) button appears.
+                value = json.dumps({'Type': 'LoginStatus', 'Content': {'Username': '', 'LoggedIn': False}})
+            # Short cache so a dying ticket is re-checked soon (was 1h — that hid
+            # a just-expired session for an hour).
+            _ = saw_live_check
+            timeout = datetime.now() + timedelta(minutes=5)
+            try:
+                self.add_cache(cache_key, value, timeout)
+            except Exception as e:
+                print(f"Error adding cache: {e}", file=sys.stderr)
+            return value
         else:
             value = json.dumps({'Type': 'LoginStatus', 'Content': {'Username': '', 'LoggedIn': False}})
 

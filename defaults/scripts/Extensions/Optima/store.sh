@@ -151,6 +151,15 @@ function Optima_logout(){
     Optima_loginstatus --flush-cache
 }
 
+# Renew the session ticket. WebAuth login stores no rememberMe, so a dead ticket
+# can only be renewed by re-running the browser flow — but the browser is still
+# signed into Ubisoft (cookies persist), so the SDK grabs a fresh ticket without
+# re-typing anything. Same launcher as login; the button is just labelled Renew.
+function Optima_renew(){
+    get_steam_env
+    launchoptions "${DECKY_PLUGIN_DIR}/scripts/Extensions/Optima/login.sh" "" "${DECKY_PLUGIN_LOG_DIR}" "Renew Ubisoft Ticket"
+}
+
 # Account form (email / username / password) → the Uplay player profile the emu
 # feeds each game. IniEditor GetContent/SaveContent, handled in Python.
 function Optima_getprofile(){
