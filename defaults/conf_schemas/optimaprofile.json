@@ -1,0 +1,53 @@
+{
+  "Sections": [
+    {
+      "Name": "Account",
+      "Visible": true,
+      "Description": "The Ubisoft account details the Uplay DRM shim presents to games. The browser login fills these in automatically; set or correct them here if needed. Stored locally only.",
+      "ModeLevel": 0,
+      "Options": [
+        {
+          "Key": "Email",
+          "Label": "Ubisoft Email",
+          "Description": "Your Ubisoft account email.",
+          "DefaultValue": "",
+          "Value": "",
+          "Type": "String",
+          "Min": 0,
+          "Max": 0,
+          "ModeLevel": 0,
+          "Parents": [],
+          "EnumValues": []
+        },
+        {
+          "Key": "Username",
+          "Label": "Username",
+          "Description": "Your Ubisoft display name (leave blank to use the name from your session).",
+          "DefaultValue": "",
+          "Value": "",
+          "Type": "String",
+          "Min": 0,
+          "Max": 0,
+          "ModeLevel": 0,
+          "Parents": [],
+          "EnumValues": []
+        },
+        {
+          "Key": "Password",
+          "Label": "Password",
+          "Description": "Your Ubisoft account password. Required by some games (e.g. AC4). Stored locally only; leave blank to keep the current one.",
+          "DefaultValue": "",
+          "Value": "",
+          "Type": "String",
+          "Min": 0,
+          "Max": 0,
+          "ModeLevel": 0,
+          "Parents": [],
+          "EnumValues": []
+        }
+      ]
+    }
+  ],
+  "Autoexec": "",
+  "AutoexecEnabled": false
+}

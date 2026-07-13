@@ -1,0 +1,30 @@
+{
+  "Sections": [
+    {
+      "Name": "Optima",
+      "Visible": true,
+      "Description": "Settings specific to Ubisoft Connect (Optima) games",
+      "ModeLevel": 0,
+      "Options": [
+        {
+          "Key": "InstallLocation",
+          "Label": "Install Location",
+          "Description": "Where new Ubisoft Connect games are installed.",
+          "DefaultValue": "SSD",
+          "Value": "SSD",
+          "Type": "Enum",
+          "Min": 0,
+          "Max": 0,
+          "ModeLevel": 0,
+          "Parents": [],
+          "EnumValues": [
+            { "Key": "SSD", "Description": "Internal SSD" },
+            { "Key": "MicroSD", "Description": "Micro SD Card" }
+          ]
+        }
+      ]
+    }
+  ],
+  "Autoexec": "",
+  "AutoexecEnabled": false
+}
