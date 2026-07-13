@@ -185,7 +185,10 @@ function Optima_settings(){
     # optima-cli, which deploys the EAX shim + install-path registry key and runs
     # it in the same prefix as the game. $1 = steam id (unused), $2 = product id.
     get_steam_env
-    GAME_SHORTNAME="${2}"
+    # Frontend passes: $1=product id (ShortName), $2=steam id, $3=game path.
+    # (NOT $2 — that's the steam app id; using it resolved optima/<steamid> which
+    # doesn't exist, so the settings app silently never launched.)
+    GAME_SHORTNAME="${1}"
     launchoptions "\\\"${SETTINGS_LAUNCHER}\\\"" "${GAME_SHORTNAME}" "" "Game Settings" false ""
 }
 
