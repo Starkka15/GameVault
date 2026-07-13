@@ -45,7 +45,11 @@
     "Type": "StoreTabs",
     "Content": {
       "Tabs": [
-        { "Title": "Ubisoft Connect", "Type": "GameGrid", "ActionId": "GetOptimaActions" }
+        {
+          "Title": "Ubisoft Connect",
+          "Type": "GameGrid",
+          "ActionId": "GetOptimaActions"
+        }
       ]
     }
   },
@@ -117,6 +121,12 @@
     "Type": "ScriptSet",
     "Content": {
       "Actions": [
+        {
+          "ActionId": "GameSettings",
+          "Title": "Game Settings (resolution, etc.)",
+          "Type": "ScriptAction",
+          "InstalledOnly": "True"
+        },
         {
           "ActionId": "UmuIdUpdate",
           "Title": "Update UMU Id",
@@ -317,6 +327,12 @@
           "Title": "Update UMU Id",
           "Type": "Executable",
           "Command": "./scripts/gamevault.sh Optima update-umu-id"
+        },
+        {
+          "Id": "GameSettings",
+          "Title": "Game Settings",
+          "Type": "Executable",
+          "Command": "./scripts/gamevault.sh Optima settings"
         }
       ]
     }

@@ -3,6 +3,7 @@ OPTIMACONF="${DECKY_PLUGIN_DIR}/scripts/optima-config.py"
 export PYTHONPATH="${DECKY_PLUGIN_DIR}/scripts/":"${DECKY_PLUGIN_DIR}/scripts/shared/":$PYTHONPATH
 
 export LAUNCHER="${DECKY_PLUGIN_DIR}/scripts/${Extensions}/Optima/optima-launcher.sh"
+export SETTINGS_LAUNCHER="${DECKY_PLUGIN_DIR}/scripts/${Extensions}/Optima/optima-settings-launcher.sh"
 export ARGS_SCRIPT="${DECKY_PLUGIN_DIR}/scripts/${Extensions}/Optima/get-optima-args.sh"
 
 DBNAME="optima.db"

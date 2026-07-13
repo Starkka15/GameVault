@@ -180,6 +180,15 @@ function Optima_run-exe(){
     launchoptions "\\\"${GAME_PATH}/${GAME_EXE}\\\"" "${ARGS}  &> ${DECKY_PLUGIN_LOG_DIR}/run-exe.log" "${GAME_PATH}" "Run exe" true "${COMPAT_TOOL}"
 }
 
+function Optima_settings(){
+    # Launch the game's settings/config app (resolution, graphics) natively via
+    # optima-cli, which deploys the EAX shim + install-path registry key and runs
+    # it in the same prefix as the game. $1 = steam id (unused), $2 = product id.
+    get_steam_env
+    GAME_SHORTNAME="${2}"
+    launchoptions "\\\"${SETTINGS_LAUNCHER}\\\"" "${GAME_SHORTNAME}" "" "Game Settings" false ""
+}
+
 function Optima_get-exe-list(){
     get_steam_env
     STEAM_ID="${1}"
