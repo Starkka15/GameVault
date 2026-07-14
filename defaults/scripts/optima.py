@@ -341,6 +341,10 @@ class Optima(GamesDb.GamesDb):
         """Parse optima-cli install output. It prints per-file progress as
         `  [i/N] name` (every 25 files + the last), and ends with
         `Installed <name> to <dir>`."""
+        # optima-cli reports progress in BYTES: `[<done>/<total> B]` (accumulated
+        # per slice, so it climbs smoothly through multi-GB files). Old builds
+        # emitted a file counter `[i/N]` — keep parsing that as a fallback.
+        bytes_re = re.compile(r"\[(\d+)/(\d+)\s*B\]")
         step_re = re.compile(r"\[(\d+)/(\d+)\]")
         last_progress_update = None
         try:
@@ -349,7 +353,12 @@ class Optima(GamesDb.GamesDb):
 
             done = 0
             total = 0
+            is_bytes = False
             for line in reversed(lines):
+                if m := bytes_re.search(line):
+                    done, total = int(m.group(1)), int(m.group(2))
+                    is_bytes = True
+                    break
                 if m := step_re.search(line):
                     done = int(m.group(1))
                     total = int(m.group(2))
@@ -387,10 +396,13 @@ class Optima(GamesDb.GamesDb):
                 }
             elif total > 0:
                 percent = min(99, (done / total) * 100.0)
-                last_progress_update = {
-                    "Percentage": percent,
-                    "Description": f"Downloading files {done} / {total} ({percent:.1f}%)"
-                }
+                if is_bytes:
+                    speed = self._download_speed(file_path, done)
+                    spd = f" · {speed}" if speed else ""
+                    desc = f"Downloading {done/1e9:.1f} / {total/1e9:.1f} GB ({percent:.0f}%){spd}"
+                else:
+                    desc = f"Downloading files {done} / {total} ({percent:.1f}%)"
+                last_progress_update = {"Percentage": percent, "Description": desc}
             else:
                 # Manifest signed, files not yet counted (big first files). Show
                 # activity rather than the raw last log line (retry chatter).
@@ -400,3 +412,28 @@ class Optima(GamesDb.GamesDb):
             time.sleep(1)
 
         return json.dumps({'Type': 'ProgressUpdate', 'Content': last_progress_update})
+
+    def _download_speed(self, file_path, done_bytes):
+        """Download speed from the byte delta since the previous poll, cached in a
+        per-game sidecar (`<progress>.spd`). Returns "" until there are two samples
+        or if bytes went backwards (new/restarted install)."""
+        spd_file = file_path + ".spd"
+        now = time.time()
+        prev_bytes = prev_time = None
+        try:
+            with open(spd_file) as f:
+                prev_bytes, prev_time = (lambda p: (int(p[0]), float(p[1])))(f.read().split())
+        except Exception:
+            pass
+        try:
+            with open(spd_file, "w") as f:
+                f.write(f"{done_bytes} {now}")
+        except Exception:
+            pass
+        if prev_bytes is None or prev_time is None:
+            return ""
+        dt, db = now - prev_time, done_bytes - prev_bytes
+        if dt <= 0 or db <= 0:
+            return ""
+        mbps = (db / dt) / 1e6
+        return f"{mbps:.0f} MB/s" if mbps >= 0.1 else ""
