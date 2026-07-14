@@ -98,7 +98,7 @@ Some limitations to be aware of (it's a beta):
 
 - **Single-player only.** Online/multiplayer is untested and generally won't work — the loaders emulate *local* ownership and can't provide a real online session (e.g. free-to-play titles like Brawlhalla that auth against Ubisoft's servers will bail).
 - **Uplay R1 / Orbit R2 titles only.** Games protected by **Denuvo** or any other DRM can't be emulated and won't launch. For those, use Ubisoft Connect via Heroic.
-- Tested working on the ROG Ally so far: **Assassin's Creed Unity**, **Watch_Dogs**.
+- Tested working on the ROG Ally so far: **Assassin's Creed III**, **Assassin's Creed IV: Black Flag**, **Assassin's Creed Unity**, **Beyond Good & Evil**, **Tom Clancy's Splinter Cell**, and **Watch_Dogs**.
 
 If a game won't launch, retry once, then open a GitHub issue with the **"[Optima] game won't launch"** template — include the game title, product id, and the logs from `~/homebrew/logs/GameVault/`.
 
