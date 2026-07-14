@@ -54,10 +54,15 @@ function Optima_getplatformconfig(){
 function Optima_cancelinstall(){
     PID=$(cat "${DECKY_PLUGIN_LOG_DIR}/${1}.pid" 2>/dev/null)
     if [[ -n "${PID}" ]]; then
-        kill $PID 2>/dev/null
-        wait $PID 2>/dev/null
+        kill "$PID" 2>/dev/null
+        wait "$PID" 2>/dev/null
     fi
-    rm "${DECKY_PLUGIN_LOG_DIR}/${1}.pid" 2>/dev/null
+    # Belt-and-suspenders: reap any stray optima-cli still installing THIS id
+    # (orphans from an earlier bad spawn). SAFE — our own cmdline contains
+    # "cancelinstall ${1}", NOT "optima-cli install ${1} ", so we can't kill self.
+    # Trailing space so id 16382 never matches 163820.
+    pkill -f "optima-cli install ${1} " 2>/dev/null
+    rm -f "${DECKY_PLUGIN_LOG_DIR}/${1}.pid" 2>/dev/null
     echo "{\"Type\": \"Success\", \"Content\": {\"Message\": \"${1} installation Cancelled\"}}"
 }
 
@@ -252,7 +257,15 @@ function optimaupdategamedetailsaftercmd() {
     game=$1
     game_path=$2
     shift 2
-    "$@"
+    # Run optima-cli in the BACKGROUND and record ITS pid (not this wrapper's) as
+    # the game's .pid — so Cancel kills the actual downloader and the running-guard
+    # tracks the real process. Running it in the foreground meant Cancel killed
+    # only the wrapper and orphaned optima-cli to init (PPID=1), and re-taps
+    # spawned duplicate racing downloads.
+    "$@" &
+    cmd_pid=$!
+    echo "$cmd_pid" > "${DECKY_PLUGIN_LOG_DIR}/${game}.pid"
+    wait "$cmd_pid"
     # Record the install path so get_game_dir / launch find the game. optima-cli
     # auto-detects the launch exe from the product configuration, so no separate
     # executable-detection step is needed.
