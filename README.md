@@ -128,6 +128,15 @@ pnpm run build
 
 The frontend is TypeScript (React); most store extensions are shell + Python under `defaults/scripts/Extensions/<Store>/`. `dist/` is git-ignored and produced by the build.
 
+## Contributing / Backend CLIs
+
+The **Ubisoft (Optima)** and **EA Play (Maxima)** extensions are thin GameVault wrappers around standalone command-line clients. Those clients live in their own repos, are the place where the real login / install / launch logic lives, and **run standalone on the desktop** (no Decky or Steam required) — which makes them easy to hack on and test outside the plugin:
+
+- **Optima** (Ubisoft Connect client, Rust `optima-cli`) — [github.com/Starkka15/Optima](https://github.com/Starkka15/Optima)
+- **Maxima** (EA Desktop replacement, `maxima-cli`) — [github.com/Starkka15/Maxima](https://github.com/Starkka15/Maxima)
+
+If you'd like to help develop or flesh these out — more supported games, better DRM handling, online/auth work — contributions to those repos are welcome. GameVault picks up the improvements automatically the next time it fetches the runtime via **About → Install Dependencies**. Extension-side glue (tabs, install/launch scripts) lives here under `defaults/scripts/Extensions/{Optima,EA}/`.
+
 ## Credits
 
 ### Original Project
