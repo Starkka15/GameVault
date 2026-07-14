@@ -8,9 +8,10 @@ assignees: ''
 ---
 
 **Before filing:** Optima has self-healing built in. On every launch it re-writes
-the game's registry keys, `Uplay.toml`, save folder, and re-verifies the R1/R2
-loader. So a one-off failure often fixes itself on the next launch — try launching
-a second time first.
+the game's registry keys and `Uplay.toml`, makes sure the local `Saves/` folder
+exists (your saves are never touched), and re-verifies the R1/R2 loader. So a
+one-off failure often fixes itself on the next launch — try launching a second
+time first.
 
 If it still fails, it's almost always one of:
 - **Unsupported DRM** — Denuvo, or any DRM other than Uplay R1 / Orbit R2. These
