@@ -1,6 +1,6 @@
 {
   "name": "GameVault",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "An open and extensible multi-store game launcher for Steam Deck. Access Epic, GOG, Amazon, and itch.io games directly from Game Mode.",
   "scripts": {
     "build": "shx rm -rf dist && rollup -c",
