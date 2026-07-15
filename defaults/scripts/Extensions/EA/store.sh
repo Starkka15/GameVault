@@ -73,6 +73,9 @@ function EA_download(){
     PROGRESS_LOG="${DECKY_PLUGIN_LOG_DIR}/${1}.progress"
     GAME_PATH="${INSTALL_DIR}/${1}"
     mkdir -p "${GAME_PATH}"
+    # Clear the deps-resolved marker so a fresh/re-install re-scans and re-applies
+    # runtime dependencies on the next launch (the install may add/change redists).
+    rm -f "${DECKY_PLUGIN_RUNTIME_DIR}/deps-state/${1}.done" 2>/dev/null
     # Run maxima-cli directly so progress output flows to the log file
     # maxima-cli writes all output (including progress) to stdout
     eaupdategamedetailsaftercmd "${1}" "${GAME_PATH}" $MAXIMA_CMD install --path "${GAME_PATH}" "${1}" > $PROGRESS_LOG 2>&1 &
@@ -104,6 +107,7 @@ function EA_uninstall(){
     if [ -d "${GAME_DIR}" ]; then
         rm -rf "${GAME_DIR}"
     fi
+    rm -f "${DECKY_PLUGIN_RUNTIME_DIR}/deps-state/${1}.done" 2>/dev/null
     TEMP=$($EACONF --clearsteamclientid "${1}" --dbfile $DBFILE)
     echo $TEMP
 
