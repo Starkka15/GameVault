@@ -8,7 +8,7 @@ GameVault lets you browse, install, and launch non-Steam games directly from Gam
 
 Built on the Junk-Store framework, this fork adds seven store/library integrations and a large set of quality-of-life features on top of the original Epic Games support.
 
-**Current release: v1.2.0** — see [Releases](https://github.com/Starkka15/GameVault/releases).
+**Current release: v1.2.1** — see [Releases](https://github.com/Starkka15/GameVault/releases).
 
 ## Store & Library Integrations
 
