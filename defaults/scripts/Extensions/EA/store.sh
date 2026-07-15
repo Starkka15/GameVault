@@ -61,6 +61,10 @@ function EA_cancelinstall(){
         kill $PID 2>/dev/null
         wait $PID 2>/dev/null
     fi
+    # Safety net: reap any maxima-cli still downloading this game (e.g. an orphan from
+    # before the wrapper-pid fix). Safe match: the canceller's cmdline is
+    # "gamevault.sh EA cancelinstall <id>", which never contains "maxima-cli install".
+    pkill -f "maxima-cli install.*${1}" 2>/dev/null
     rm "${DECKY_PLUGIN_LOG_DIR}/${1}.pid" 2>/dev/null
     echo "{\"Type\": \"Success\", \"Content\": {\"Message\": \"${1} installation Cancelled\"}}"
 }
@@ -223,7 +227,15 @@ function eaupdategamedetailsaftercmd() {
     game=$1
     game_path=$2
     shift 2
-    "$@"
+    # Run maxima-cli in the BACKGROUND and record ITS real pid, so Cancel kills the
+    # actual downloader (not this wrapper). Running it foreground made the pidfile
+    # hold the wrapper's pid — Cancel then orphaned maxima-cli to init (PPID=1) and a
+    # re-tap spawned a second racing downloader that clobbered the first (BF4 froze
+    # at 0.65% with two maxima-cli writing the same folder).
+    "$@" &
+    cmd_pid=$!
+    echo "$cmd_pid" > "${DECKY_PLUGIN_LOG_DIR}/${game}.pid"
+    wait "$cmd_pid"
     # Update DB with install path first so detect_executable can find the game dir
     python3 -c "
 import sys, sqlite3
