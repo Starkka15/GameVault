@@ -158,3 +158,8 @@ If you'd like to help develop or flesh these out — more supported games, bette
 ## License
 
 See [LICENSE](LICENSE). GameVault inherits Junk-Store's license as a fork.
+
+## AI Disclosure
+
+This project is developed with AI assistance. See **[AI.md](AI.md)** for how AI is used
+here, the ethical obligations behind it, and how upstream credit and licensing are handled.
