@@ -7,8 +7,87 @@
 RT="${DECKY_PLUGIN_RUNTIME_DIR:-${HOME}/homebrew/data/GameVault}/rpgmaker"
 NWJS_VER="v0.72.0"
 MKXPZ_URL="https://github.com/Starkka15/GameVault/releases/download/runtimes/mkxp-z-x86_64.AppImage"
-RTP_VXACE_URL="https://github.com/Starkka15/GameVault/releases/download/runtimes/RPGVXAce-RTP.tar.gz"
-RTP_XP_URL="https://github.com/Starkka15/GameVault/releases/download/runtimes/RPGXP-RTP.tar.gz"
+
+# RPG Maker Run-Time Packages are fetched from RPG Maker's OWN official source
+# (Degica/Kadokawa's CDN) at the moment the user runs Install Dependencies — i.e.
+# the user is requesting the RTP from its publisher, and GameVault is only the
+# fetch/extract agent. We do NOT re-host Enterbrain's proprietary assets.
+# The downloads are Inno Setup installers, extracted on-device with innoextract
+# (GPL — github.com/dscharrer/innoextract).
+RTP_VXACE_URL="https://dl.komodo.jp/rpgmakerweb/run-time-packages/RPGVXAce_RTP.zip"
+RTP_VX_URL="https://dl.komodo.jp/rpgmakerweb/run-time-packages/vx_rtp102e.zip"
+RTP_XP_URL="https://dl.komodo.jp/rpgmakerweb/run-time-packages/xp_rtp104e.exe"
+INNOEXTRACT_URL="https://github.com/dscharrer/innoextract/releases/download/1.9/innoextract-1.9-linux.tar.xz"
+RTP_UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36"
+
+# curl with a cert-chain fallback: Degica's CDN (dl.komodo.jp) serves an incomplete
+# TLS chain ("unable to get local issuer certificate"), so retry with relaxed
+# validation. The RTP is static, public game-asset content, so this is acceptable.
+_rtp_fetch() {  # $1=url  $2=out
+    curl -sfL  -A "$RTP_UA" -o "$2" "$1" && return 0
+    echo "  (secure fetch failed — retrying with relaxed cert validation for the official RTP host)"
+    curl -sfLk -A "$RTP_UA" -o "$2" "$1"
+}
+
+# Fetch innoextract from its official OSS release (multi-arch bundle: a wrapper
+# script that picks bin/amd64 on SteamOS). Cached under $RT/innoextract.
+_ensure_innoextract() {
+    IE="$RT/innoextract/innoextract"
+    [ -x "$IE" ] && return 0
+    echo "Fetching innoextract (RTP installer extractor)..."
+    if _rtp_fetch "$INNOEXTRACT_URL" /tmp/gv-ie.tar.xz; then
+        rm -rf /tmp/gv-ie && mkdir -p /tmp/gv-ie
+        tar xf /tmp/gv-ie.tar.xz -C /tmp/gv-ie 2>/dev/null
+        local d
+        d="$(dirname "$(find /tmp/gv-ie -name innoextract -type f | head -1)")"
+        if [ -n "$d" ] && [ -f "$d/innoextract" ]; then
+            rm -rf "$RT/innoextract"; mv "$d" "$RT/innoextract"
+            chmod +x "$RT/innoextract/innoextract" 2>/dev/null
+            find "$RT/innoextract/bin" -type f -exec chmod +x {} \; 2>/dev/null
+        fi
+        rm -rf /tmp/gv-ie /tmp/gv-ie.tar.xz
+    fi
+    [ -x "$IE" ]
+}
+
+# Fetch + extract one official RTP into $RT/rtp/<name>.
+#   $1=name (RPGVXAce|RPGVX|RPGXP)  $2=url  $3=human label
+_install_rtp() {
+    local name="$1" url="$2" label="$3"
+    [ -d "$RT/rtp/$name" ] && { echo "$label RTP already present"; return 0; }
+    _ensure_innoextract || { echo "WARNING: innoextract unavailable; skipping $label RTP (RTP-dependent games may miss stock assets)."; return 1; }
+    echo "Downloading $label RTP from the official RPG Maker source..."
+    local tmp="/tmp/gv-rtp-$name"; rm -rf "$tmp"; mkdir -p "$tmp"
+    local dl="$tmp/download"
+    if ! _rtp_fetch "$url" "$dl"; then
+        echo "WARNING: $label RTP download failed; RTP-dependent games may miss stock assets."
+        rm -rf "$tmp"; return 1
+    fi
+    # The download is either a zip wrapping RTP*/Setup.exe, or a bare Inno .exe.
+    local setup=""
+    if unzip -tq "$dl" >/dev/null 2>&1; then
+        unzip -oq "$dl" -d "$tmp/z"
+        setup="$(find "$tmp/z" -iname 'setup.exe' | head -1)"
+        [ -z "$setup" ] && setup="$(find "$tmp/z" -iname '*.exe' | head -1)"
+    else
+        setup="$dl"
+    fi
+    if [ -z "$setup" ] || [ ! -f "$setup" ]; then
+        echo "WARNING: couldn't find the $label RTP installer inside the download."
+        rm -rf "$tmp"; return 1
+    fi
+    "$RT/innoextract/innoextract" -e -s -d "$tmp/x" "$setup" >/dev/null 2>&1
+    # innoextract lays the installed game files under an app/ subdir.
+    local app="$tmp/x/app"; [ -d "$app" ] || app="$tmp/x"
+    if [ -d "$app/Graphics" ] || [ -d "$app/Audio" ]; then
+        mkdir -p "$RT/rtp"; rm -rf "$RT/rtp/$name"; mv "$app" "$RT/rtp/$name"
+        echo "$label RTP installed (from official source)"
+    else
+        echo "WARNING: $label RTP extraction produced no assets."
+        rm -rf "$tmp"; return 1
+    fi
+    rm -rf "$tmp"
+}
 
 function install() {
     mkdir -p "$RT"
@@ -77,35 +156,15 @@ function install() {
         echo "mkxp-z already present"
     fi
 
-    # --- VX Ace RTP (stock assets for RTP-dependent games) ---
-    if [ ! -d "$RT/rtp/RPGVXAce" ]; then
-        echo "Downloading VX Ace RTP (~190 MB)..."
-        mkdir -p "$RT/rtp"
-        if curl -sfL -o /tmp/gv-rtp-vxace.tar.gz "$RTP_VXACE_URL"; then
-            tar xzf /tmp/gv-rtp-vxace.tar.gz -C "$RT/rtp"
-            rm -f /tmp/gv-rtp-vxace.tar.gz
-            echo "VX Ace RTP installed"
-        else
-            echo "WARNING: VX Ace RTP download failed; RTP-dependent VX Ace games may miss stock assets."
-        fi
-    else
-        echo "VX Ace RTP already present"
-    fi
-
-    # --- XP RTP (stock audio for RPG Maker XP games; graphics ship in-game) ---
-    if [ ! -d "$RT/rtp/RPGXP" ]; then
-        echo "Downloading XP RTP (~9 MB)..."
-        mkdir -p "$RT/rtp"
-        if curl -sfL -o /tmp/gv-rtp-xp.tar.gz "$RTP_XP_URL"; then
-            tar xzf /tmp/gv-rtp-xp.tar.gz -C "$RT/rtp"
-            rm -f /tmp/gv-rtp-xp.tar.gz
-            echo "XP RTP installed"
-        else
-            echo "WARNING: XP RTP download failed; RTP-dependent XP games may miss stock sounds."
-        fi
-    else
-        echo "XP RTP already present"
-    fi
+    # --- RPG Maker RTPs (stock assets for RTP-dependent games) ---
+    # Fetched from RPG Maker's official publisher CDN at the user's request (they
+    # ran Install Dependencies) and extracted on-device — GameVault is the fetch
+    # agent, not a re-host of Enterbrain's assets. Self-contained games ("without
+    # RTP", the majority) don't need these at all; the launcher only wires an RTP
+    # path when a game lacks its own assets.
+    _install_rtp RPGVXAce "$RTP_VXACE_URL" "VX Ace"
+    _install_rtp RPGVX    "$RTP_VX_URL"    "VX"
+    _install_rtp RPGXP    "$RTP_XP_URL"    "XP"
 
     # --- ScummVM + DOSBox (My Added Games: classic/adventure/DOS titles) ---
     # Reuse the same flatpak apps the GOG extension launches; the scanner probes

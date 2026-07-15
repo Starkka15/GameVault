@@ -88,6 +88,8 @@ Runs RPG Maker games **natively** — no Wine or Proton — so they're light on 
 
 There's no store to log into — it's a **drop-folder scanner**. Copy a game's folder into the RPG Maker install location; the extension detects the engine, lists it, and "Add" creates a **native** Steam shortcut (compatibility tool cleared). The NW.js and mkxp-z runtimes are fetched by **About → Install Dependencies**.
 
+**Run-Time Packages (RTP):** some older VX Ace/XP/VX games rely on RPG Maker's shared RTP assets rather than bundling their own. When you run Install Dependencies, GameVault fetches those RTPs **directly from RPG Maker's official publisher source** (Degica/Kadokawa) and extracts them on-device — it does not re-host them. Most games ship self-contained and don't need this at all.
+
 ### Ubisoft (Optima) *(beta)*
 
 Installs and launches games you **own** on Ubisoft, backed by a standalone `optima-cli` client — no Ubisoft Connect install required. Ownership is verified against your Ubisoft account, and games run through GameVault's own **Uplay R1** / **Orbit R2** DRM loaders under Proton.
