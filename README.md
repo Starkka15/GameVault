@@ -148,7 +148,17 @@ If you'd like to help develop or flesh these out — more supported games, bette
 - Logan (Beebles) — UI Developer
 
 ### Community Fork
-- **Starkka15** — GOG, Amazon, itch.io, RPG Maker (native), EA Play, and Ubisoft (Optima) extensions; itch.io Collections; Uplay R1 / Orbit R2 DRM loaders; GOG DLC manager; My Added Games; cloud save sync; SteamGridDB integration + artwork scan; GE-Proton installer; protonfixes lookup/apply; storage management; batch install queue; update detection
+- **Starkka15** — GOG, Amazon, itch.io, RPG Maker (native), EA Play, and Ubisoft (Optima) extensions; `optima-cli` (the Ubisoft Connect client itself); itch.io Collections; GOG DLC manager; My Added Games; cloud save sync; SteamGridDB integration + artwork scan; GE-Proton installer; protonfixes lookup/apply; storage management; batch install queue; update detection
+
+### Backends & Third-Party Tools
+
+Most of the fork's store extensions are wrappers that drive excellent third-party tools. Full credit to their authors — GameVault just integrates them into Game Mode:
+
+- **[gogdl](https://github.com/Heroic-Games-Launcher/heroic-gogdl)** — the GOG downloader behind the GOG extension, from the **Heroic Games Launcher** project (Paweł Lidwin / imLinguin and contributors). GameVault installs the upstream `heroic-gogdl` flatpak.
+- **[Nile](https://github.com/imLinguin/nile)** — the Amazon Games downloader behind the Amazon extension, by **Paweł Lidwin (imLinguin)**.
+- **[Maxima](https://github.com/ArmchairDevelopers/Maxima)** (`maxima-cli`) — the open-source EA Desktop replacement powering the EA Play extension, by the **Maxima project (ArmchairDevelopers)** and contributors. Our [fork](https://github.com/Starkka15/Maxima) adds the non-interactive install/launch CLI.
+- **RPG Maker runtimes** — [**NW.js**](https://nwjs.io) (runs MV/MZ) by the NW.js project; [**mkxp-z**](https://github.com/mkxp-z/mkxp-z) (runs VX Ace/XP/VX), a continuation of [**mkxp**](https://github.com/Ancurio/mkxp) by Jonas Kulla (Ancurio). GameVault only repackages the mkxp-z AppImage; the runtime is theirs.
+- **Ubisoft (Optima) DRM loaders** — [`optima-cli`](https://github.com/Starkka15/Optima) is ours, but the emulation shims it deploys are **not**: the [Uplay R1 loader](https://github.com/Re0xCat/uplay-r1-loader) and [Orbit R2 loader](https://github.com/Re0xCat/ubiorbitapi-r2-loader) by **Re0xCat**, Ubisoft demux/manifest/install-protocol reversing by [**YoobieRE**](https://github.com/YoobieRE), and Proton launching via [**umu-launcher**](https://github.com/Open-Wine-Components/umu-launcher).
 
 ## Links
 
