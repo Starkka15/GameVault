@@ -159,6 +159,15 @@ Most of the fork's store extensions are wrappers that drive excellent third-part
 - **[Maxima](https://github.com/ArmchairDevelopers/Maxima)** (`maxima-cli`) — the open-source EA Desktop replacement powering the EA Play extension, by the **Maxima project (ArmchairDevelopers)** and contributors. We run a [forked branch](https://github.com/Starkka15/Maxima) that adds the non-interactive install/launch CLI plus GameVault-specific fixes (e.g. live download-progress reporting, install resume, registry self-heal).
 - **RPG Maker runtimes** — [**NW.js**](https://nwjs.io) (runs MV/MZ) by the NW.js project; [**mkxp-z**](https://github.com/mkxp-z/mkxp-z) (runs VX Ace/XP/VX), a continuation of [**mkxp**](https://github.com/Ancurio/mkxp) by Jonas Kulla (Ancurio). GameVault only repackages the mkxp-z AppImage; the runtime is theirs.
 - **Ubisoft (Optima) DRM loaders** — [`optima-cli`](https://github.com/Starkka15/Optima) is ours, but the emulation shims it deploys are **not**: the [Uplay R1 loader](https://github.com/Re0xCat/uplay-r1-loader) and [Orbit R2 loader](https://github.com/Re0xCat/ubiorbitapi-r2-loader) by **Re0xCat**, Ubisoft demux/manifest/install-protocol reversing by [**YoobieRE**](https://github.com/YoobieRE), and Proton launching via [**umu-launcher**](https://github.com/Open-Wine-Components/umu-launcher). We vendor and patch the loaders (e.g. the Orbit R2 shim is fixed up in `optima-cli`'s tree) so they work under our Proton launch flow — original authorship is unchanged.
+- **[Legendary](https://github.com/derrod/legendary)** — the Epic Games downloader behind the Epic integration, by **Rui Pinheiro (derrod)** (used via the upstream Junk-Store Epic integration).
+- **[GE-Proton](https://github.com/GloriousEggroll/proton-ge-custom)** — the custom Proton build fetched by the GE-Proton installer, by **Thomas Crider (GloriousEggroll)**.
+- **[umu-protonfixes](https://github.com/Open-Wine-Components/umu-protonfixes)** — the Proton-fixes database behind the protonfixes lookup/apply feature (and [umu-launcher](https://github.com/Open-Wine-Components/umu-launcher), also used by Optima), by **Open-Wine-Components**.
+- **[SteamGridDB](https://www.steamgriddb.com)** — the community artwork source powering the artwork fallback and library artwork scan.
+- **[DOSBox Staging](https://dosbox-staging.github.io)** — runs DOS-era GOG titles; installed as a flatpak on demand.
+
+### Platform
+
+GameVault is a plugin for **[Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader)** and is built with [`decky-frontend-lib`](https://github.com/SteamDeckHomebrew/decky-frontend-lib) — both by the **SteamDeck Homebrew** project. None of this exists without their plugin platform.
 
 ## Links
 
