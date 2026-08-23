@@ -103,12 +103,33 @@ if [[ -n "${GAME_DIR}" && -d "${GAME_DIR}" ]]; then
         || echo "[$(date)] register-install returned non-zero (continuing)" >> "$LOG"
 fi
 
+# Per-title executable override (ea-exe-overrides.conf: <slug>=<relative exe>).
+# Some EA titles ship an Origin launcher wrapper that maxima runs by default
+# (from the offer manifest) but which then hands off to the real game via a
+# link2ea:// protocol call — a Windows-only path that doesn't work under our
+# Linux Wine bottle, so the sub-game fails "Origin Authorization failed". Point
+# maxima at the real game exe instead (via --game-path) so it launches directly
+# and authenticates against LSX like a normal direct-launch title (the same path
+# Mirror's Edge Catalyst / BF4 use). E.g. C&C Remastered: ClientLauncherG.exe ->
+# ClientG.exe (the actual game, loads TiberianDawn.dll/RedAlert.dll).
+EXE_OVERRIDE=""
+EXE_OVERRIDE_FILE="${DECKY_PLUGIN_DIR}/scripts/${Extensions}/EA/ea-exe-overrides.conf"
+if [[ -f "${EXE_OVERRIDE_FILE}" ]]; then
+    REL_EXE=$(grep -E "^${ID}=" "${EXE_OVERRIDE_FILE}" 2>/dev/null | head -1 | cut -d= -f2- | sed 's/#.*//' | xargs)
+    if [[ -n "${REL_EXE}" && -n "${GAME_DIR}" && -f "${GAME_DIR}/${REL_EXE}" ]]; then
+        EXE_OVERRIDE="--game-path ${GAME_DIR}/${REL_EXE}"
+        echo "[$(date)] exe override for '${ID}': launching ${GAME_DIR}/${REL_EXE} directly" >> "$LOG"
+    elif [[ -n "${REL_EXE}" ]]; then
+        echo "[$(date)] exe override '${REL_EXE}' listed for '${ID}' but not found under '${GAME_DIR}'; using default" >> "$LOG"
+    fi
+fi
+
 echo "[$(date)] launching '${ID}' via maxima-cli launch (args: ${ARGS})" >> "$LOG"
 
 # Trailing args after `--` are forwarded verbatim to the game exe by maxima.
-# shellcheck disable=SC2086  # ARGS must word-split into separate tokens
+# shellcheck disable=SC2086  # ARGS/EXE_OVERRIDE must word-split into separate tokens
 if [[ -n "${ARGS// }" ]]; then
-    exec "$MAXIMA_CMD" launch "$ID" -- ${ARGS} >> "$LOG" 2>&1
+    exec "$MAXIMA_CMD" launch "$ID" ${EXE_OVERRIDE} -- ${ARGS} >> "$LOG" 2>&1
 else
-    exec "$MAXIMA_CMD" launch "$ID" >> "$LOG" 2>&1
+    exec "$MAXIMA_CMD" launch "$ID" ${EXE_OVERRIDE} >> "$LOG" 2>&1
 fi

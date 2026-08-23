@@ -218,11 +218,14 @@ class Optima(GamesDb.GamesDb):
             username = "Ubisoft User"
             # `whoami` live-verifies the ticket against UbiServices. Trust that
             # live check — NOT mere file existence — so an expired/dead session
-            # actually surfaces (LoggedIn=False → the UI shows the sign-in button,
-            # which re-opens the browser and grabs a fresh ticket = renewal). The
-            # WebAuth login stores no rememberMe, so the browser is the only
-            # renewal path; if we reported LoggedIn=True on a dead ticket, every
-            # online action would silently fail with no way to recover from the UI.
+            # actually surfaces.
+            #
+            # Ubisoft tickets last about three hours, so a dead one is the normal
+            # state, not an exception. Since optima-cli 0.2.0 the WebAuth login
+            # stores a rememberMe ticket, so a dead session can be renewed with
+            # `optima-cli refresh` — no browser, no desktop-mode trip. Try that
+            # before reporting logged out; only fall back to the sign-in button
+            # when the refresh itself fails.
             live_ok = True  # benefit of the doubt if whoami itself won't run
             saw_live_check = False
             try:
@@ -236,6 +239,22 @@ class Optima(GamesDb.GamesDb):
                         live_ok = 'live check: ok' in line.lower()
             except Exception as e:
                 print(f"whoami failed: {e}", file=sys.stderr)
+            if not live_ok:
+                # Dead ticket: try a passwordless renewal before giving up.
+                try:
+                    self.execute_shell(f"{self.optima_cmd} refresh")
+                    output = self.execute_shell(f"{self.optima_cmd} whoami")
+                    for line in output.split('\n'):
+                        m = re.match(r'\s*name:\s*(.+)$', line)
+                        if m and m.group(1).strip():
+                            username = m.group(1).strip()
+                        if 'live check:' in line.lower():
+                            live_ok = 'live check: ok' in line.lower()
+                    if live_ok:
+                        print("optima: session auto-refreshed via rememberMe", file=sys.stderr)
+                except Exception as e:
+                    print(f"optima refresh failed: {e}", file=sys.stderr)
+
             if live_ok:
                 value = json.dumps({'Type': 'LoginStatus', 'Content': {'Username': username, 'LoggedIn': True}})
             else:
