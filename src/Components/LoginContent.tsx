@@ -37,7 +37,7 @@ export const LoginContent: FC<{  initActionSet: string; initAction: string; }> =
         setContent(result);
         logger.debug("Login status: ", result);
     };
-    const onLoginExit = (id) => {
+    const onLoginExit = (id: number) => {
         Navigation.CloseSideMenus();
         Navigation.Navigate(originRoute);
         setTimeout(() => {

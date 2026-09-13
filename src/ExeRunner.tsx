@@ -3,7 +3,7 @@ import { executeAction } from "./Utils/executeAction";
 import { getAppDetails } from './Utils/utils';
 import { ActionSet, ExecuteGetExeActionSetArgs, ExecuteGetFilesDataArgs, ExecuteRunBinaryArgs, FilesData, SaveRefresh } from "./Types/Types";
 import { DialogButton, ModalRoot, PanelSection, ScrollPanelGroup, SteamSpinner } from "@decky/ui";
-import Logger, { log } from "./Utils/logger";
+import Logger from "./Utils/logger";
 import { gameIDFromAppID } from "./Utils/utils";
 import { EditorProperties } from './Types/EditorProperties';
 
@@ -160,7 +160,9 @@ export const ExeRunner: FC<ExeRunnerProperties> = ({
                         closeModal();
                     };
                     return (
-                        <ScrollPanelGroup style={{ margin: "0px" }}>
+                        <ScrollPanelGroup
+                            // @ts-ignore ScrollPanelGroup forwards style at runtime
+                            style={{ margin: "0px" }}>
                             <PanelSection>
                                 <DialogButton
                                     onOKButton={runExe}

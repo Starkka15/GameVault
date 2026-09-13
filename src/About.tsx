@@ -10,7 +10,6 @@ import { ScrollableWindowRelative } from './ScrollableWindow';
 import { Developer } from "./Developer";
 import { addAchievement, hasAchievement, hasAchievements } from "./Utils/achievements";
 import { Achievements } from "./Achievements";
-import { FaInfo, FaQ, FaQuestion } from "react-icons/fa6";
 import { StorageTab } from "./StorageTab";
 
 declare const __PLUGIN_VERSION__: string;
@@ -269,6 +268,7 @@ export const About: FC = () => {
                                                     <div style={{ marginBottom: "8px" }}>
                                                         <TextField
                                                             bIsPassword={true}
+                                                            // @ts-ignore TextField forwards placeholder to the input at runtime
                                                             placeholder="Sudo password (leave blank if none)"
                                                             value={sudoPassword}
                                                             onChange={(e) => setSudoPassword(e.target.value)}
@@ -450,7 +450,9 @@ export const About: FC = () => {
                             <br />
                         </PanelSection>
                             <PanelSection>
-                                <TextField placeholder="Enter URL" value={url} onChange={(e) => setUrl(e.target.value)} />
+                                <TextField
+                                    // @ts-ignore TextField forwards placeholder to the input at runtime
+                                    placeholder="Enter URL" value={url} onChange={(e) => setUrl(e.target.value)} />
                             </PanelSection>
                             <PanelSection> <ToggleField label="Backup" checked={backup === "true"}
                                 onChange={(newValue) => setBackup(newValue.toString())} />

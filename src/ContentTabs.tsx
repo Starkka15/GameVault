@@ -1,5 +1,5 @@
 import { DialogBody, DialogControlsSection, SidebarNavigation, SidebarNavigationPage, Tab, Tabs } from "@decky/ui";
-import { FC, useEffect, useRef, useState } from "react";
+import { FC, useEffect, useState } from "react";
 import { ActionSet, ContentType, ContentError, ContentResult, ExecuteArgs, ExecuteGetContentArgs, StoreContent, StoreTabsContent, GameDataList } from "./Types/Types";
 import Logger from "./Utils/logger";
 import { executeAction } from "./Utils/executeAction";
@@ -24,7 +24,6 @@ export interface StoreTabsState {
 }
 
 export const ContentTabs: FC<ContentTabsProperties> = ({ content, initAction, initActionSet, layout, subActionSet }) => {
-    const logger = new Logger("StoreTabs");
     const { cacheState: cacheData, setCacheState: setCacheData } = useCachedState(initActionSet, initAction, 'tabcontent', { currentTab: "-1" });
 
     const getTabs: () => Tab[] = () => {

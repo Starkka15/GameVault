@@ -1,5 +1,5 @@
 import { Focusable, PanelSection, Dropdown, ModalRootProps, ScrollPanelGroup } from "@decky/ui";
-import { FC, useEffect, useState, useRef } from "react";
+import { FC, useEffect, useState } from "react";
 import { ValueType, Section, ConfData, KeyValuePair, ActionSet, ContentError, ExecuteGetActionSetArgs } from "./Types/Types";
 import { SectionEditor } from "./Components/SectionEditor";
 import Logger from "./Utils/logger";
@@ -18,10 +18,9 @@ export const SettingsEditor: FC<EditorProperties> = ({
     const logger = new Logger("SettingsEditor")
     logger.log(`initActionSet: ${initActionSet}, initAction: ${initAction}, contentId: ${contentId}`)
     const [confData, setConfData] = useState({} as ConfData);
-    const focusRef = useRef(null);
     const [modeLevel, setModeLevel] = useState(0 as number);
     const [actionSetName, setActionSetName] = useState("" as string);
-    const [helpText, setHelpText] = useState({
+    const [, setHelpText] = useState({
         Key: "",
         Description: "",
         DefaultValue: "",
@@ -33,7 +32,7 @@ export const SettingsEditor: FC<EditorProperties> = ({
         Parents: [],
         EnumValues: [],
     } as KeyValuePair);
-    const [sectionHelpText, setSectionHelpText] = useState<string>("");
+    const [, setSectionHelpText] = useState<string>("");
     useEffect(() => {
         OnInit();
 

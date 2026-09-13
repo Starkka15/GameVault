@@ -21,7 +21,7 @@ export const AchievementDisplay:FC<AchievementModalProps> = ({ achievement, onCa
             <Focusable noFocusRing={false}>
                 <PanelSection title="Achievement">
                     <div>
-                        <IconContext.Provider value={{ className: "shared-class", size: 100 }}>
+                        <IconContext.Provider value={{ className: "shared-class", size: "100" }}>
                             <div style={{ display: 'flex', alignItems: 'center' }}>
                                 {achievement.icon}
                                 </div>
@@ -62,7 +62,7 @@ export const Achievements: FC = () => {
                 }}
             >
 
-                <IconContext.Provider value={{ className: "shared-class", size: 100 }}>
+                <IconContext.Provider value={{ className: "shared-class", size: "100" }}>
                     {achievements.map((achievement) => {
                         const details = getAchievementDetails(achievement);
                         return (

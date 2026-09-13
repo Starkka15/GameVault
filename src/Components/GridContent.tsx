@@ -208,6 +208,7 @@ export const GridContent: FC<GridContentProps> = ({ content, initActionSet, refr
             <Focusable style={{ display: "flex", gap: '15px' }}>
                 <div style={{ width: '100%' }}>
                     <TextField
+                        // @ts-ignore TextField forwards placeholder to the input at runtime
                         placeholder="Search"
                         value={filter}
                         onChange={(e) => {

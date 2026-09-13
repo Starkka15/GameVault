@@ -59,6 +59,7 @@ export const BatEditor: FC<EditorProperties> = ({
                 closeModal={closeModal}
             >
                 <ScrollPanelGroup
+                    // @ts-ignore ScrollPanelGroup forwards style at runtime
                     style={{ margin: "0px" }}>
                     <Focusable
                         style={{ background: "inherit" }}>
@@ -115,6 +116,7 @@ export const BatEditor: FC<EditorProperties> = ({
                                                 }} />
                                         </Focusable>
                                         <Focusable
+                                            // @ts-ignore focusableIfNoChildren is honoured at runtime
                                             focusableIfNoChildren={true}
                                             noFocusRing={true}
                                             onFocusCapture={() => (focusRef && focusRef.current != null) && focusRef.current.focus()

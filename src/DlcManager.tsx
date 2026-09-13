@@ -1,5 +1,5 @@
 import { FC, useEffect, useState } from "react";
-import { ModalRoot, DialogButton, PanelSection, PanelSectionRow, SteamSpinner, ProgressBar, ConfirmModal, showModal, Focusable } from "@decky/ui";
+import { ModalRoot, DialogButton, PanelSection, PanelSectionRow, SteamSpinner, ProgressBarWithInfo, ConfirmModal, showModal, Focusable } from "@decky/ui";
 import { executeAction } from "./Utils/executeAction";
 import { ContentType, ExecuteArgs, ProgressUpdate, SuccessContent } from "./Types/Types";
 import Logger from "./Utils/logger";
@@ -149,7 +149,7 @@ export const DlcManager: FC<DlcManagerProperties> = ({
                                             {dlc.Size ? ` ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ${dlc.Size}` : ""}
                                         </div>
                                         {downloading && (
-                                            <ProgressBar
+                                            <ProgressBarWithInfo
                                                 nProgress={progress!.Percentage}
                                                 indeterminate={progress!.Percentage <= 0}
                                                 sOperationText={progress!.Description || "InstallingÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦"}

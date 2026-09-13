@@ -7,7 +7,8 @@ export const DownloadBadge: FC = () => {
     const [queueState, setQueueState] = useState<QueueState>(installQueue.getState());
 
     useEffect(() => {
-        return installQueue.subscribe(setQueueState);
+        const unsub = installQueue.subscribe(setQueueState);
+        return () => { unsub(); };
     }, []);
 
     const activeItems = queueState.items.filter(

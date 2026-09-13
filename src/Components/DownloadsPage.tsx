@@ -1,13 +1,14 @@
-import { DialogBody, DialogButton, Focusable, Navigation, ProgressBar } from "@decky/ui";
+import { DialogBody, DialogButton, Focusable, ProgressBar } from "@decky/ui";
 import { FC, useEffect, useState } from "react";
 import { QueueItem, QueueState, installQueue } from "../Utils/installQueue";
-import { FaArrowDown, FaArrowUp, FaPlay, FaTimes, FaTrash } from "react-icons/fa";
+import { FaArrowDown, FaArrowUp, FaTimes, FaTrash } from "react-icons/fa";
 
 export const DownloadsPage: FC = () => {
     const [queueState, setQueueState] = useState<QueueState>(installQueue.getState());
 
     useEffect(() => {
-        return installQueue.subscribe(setQueueState);
+        const unsub = installQueue.subscribe(setQueueState);
+        return () => { unsub(); };
     }, []);
 
     const downloading = queueState.items.filter(i => i.status === "downloading" || i.status === "installing");
