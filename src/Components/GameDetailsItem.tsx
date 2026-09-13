@@ -1,5 +1,6 @@
-import { Focusable, ServerAPI, ModalRoot, sleep, gamepadDialogClasses, showModal, Navigation } from "decky-frontend-lib";
-import { useState, useEffect, VFC, useRef } from "react";
+import { Focusable, ModalRoot, sleep, gamepadDialogClasses, showModal, Navigation } from "@decky/ui";
+import { toaster } from "@decky/api";
+import { useState, useEffect, FC, useRef } from "react";
 import GameDisplay from "./GameDisplay";
 import { ContentError, ContentResult, ContentType, EmptyContent, ExecuteGetGameDetailsArgs, ExecuteInstallArgs, GameDetails, GameImages, LaunchOptions, MenuAction, ProgressUpdate, ScriptActions } from "../Types/Types";
 import { runApp } from "../Utils/utils";
@@ -8,21 +9,21 @@ import { Loading } from "./Loading";
 import { executeAction } from "../Utils/executeAction";
 import { footerClasses } from '../staticClasses';
 import { reaction } from 'mobx';
-import { ErrorDisplay } from "./ErrorDisplay";
 import { ErrorModal } from "../ErrorModal";
 import { installQueue, QueueItem, QueueState } from '../Utils/installQueue';
 
 const gameDetailsRootClass = 'game-details-modal-root';
 
 interface GameDetailsItemProperties {
-    serverAPI: ServerAPI;
+
     shortname: string;
     initActionSet: string;
     closeModal?: any;
     initAction?: string;
+    clearActiveGame?: () => void;
 }
 
-export const GameDetailsItem: VFC<GameDetailsItemProperties> = ({ serverAPI, shortname, initActionSet, closeModal }) => {
+export const GameDetailsItem: FC<GameDetailsItemProperties> = ({ shortname, initActionSet, closeModal }) => {
 
     const logger = new Logger("GameDetailsItem");
     const [scriptActions, setScriptActions] = useState<MenuAction[]>([]);
@@ -56,7 +57,6 @@ export const GameDetailsItem: VFC<GameDetailsItemProperties> = ({ serverAPI, sho
 
     // Subscribe to installQueue for this game's status
     useEffect(() => {
-        installQueue.setServerAPI(serverAPI);
         const unsubscribe = installQueue.subscribe((state: QueueState) => {
             const item = state.items.find(i => i.shortname === shortname);
             setQueueItem(item);
@@ -65,7 +65,7 @@ export const GameDetailsItem: VFC<GameDetailsItemProperties> = ({ serverAPI, sho
                 reloadData();
             }
         });
-        return unsubscribe;
+        return () => { unsubscribe(); };
     }, [shortname]);
 
     useEffect(() => {
@@ -81,9 +81,7 @@ export const GameDetailsItem: VFC<GameDetailsItemProperties> = ({ serverAPI, sho
     const onInit = async () => {
         try {
             logger.debug("onInit starting");
-            const gameDetailsResponse = await executeAction<ExecuteGetGameDetailsArgs, GameDetails>(
-                serverAPI,
-                initActionSet,
+            const gameDetailsResponse = await executeAction<ExecuteGetGameDetailsArgs, GameDetails>(initActionSet,
                 "GetDetails",
                 {
                     shortname: shortname
@@ -96,9 +94,7 @@ export const GameDetailsItem: VFC<GameDetailsItemProperties> = ({ serverAPI, sho
             }
             setSteamClientID(gameDetailsResponse.Content.SteamClientID);
             logger.debug("onInit finished");
-            const scriptActionResponse = await executeAction<ExecuteGetGameDetailsArgs, ScriptActions>(
-                serverAPI,
-                initActionSet,
+            const scriptActionResponse = await executeAction<ExecuteGetGameDetailsArgs, ScriptActions>(initActionSet,
                 "GetGameScriptActions",
                 {
                     shortname: shortname
@@ -120,9 +116,7 @@ export const GameDetailsItem: VFC<GameDetailsItemProperties> = ({ serverAPI, sho
     const updateLocalProgress = async () => {
         while (localInstallingRef.current) {
             try {
-                const progressUpdateResponse = await executeAction<ExecuteGetGameDetailsArgs, ProgressUpdate>(
-                    serverAPI,
-                    initActionSet,
+                const progressUpdateResponse = await executeAction<ExecuteGetGameDetailsArgs, ProgressUpdate>(initActionSet,
                     "GetProgress",
                     {
                         shortname: shortname
@@ -159,9 +153,7 @@ export const GameDetailsItem: VFC<GameDetailsItemProperties> = ({ serverAPI, sho
 
     const uninstall = async () => {
         try {
-            await executeAction<ExecuteGetGameDetailsArgs, ContentType>(
-                serverAPI,
-                initActionSet,
+            await executeAction<ExecuteGetGameDetailsArgs, ContentType>(initActionSet,
                 "Uninstall",
                 {
                     shortname: shortname
@@ -180,9 +172,7 @@ export const GameDetailsItem: VFC<GameDetailsItemProperties> = ({ serverAPI, sho
         if (update) {
             // Updates use local state since they're for already-installed games
             try {
-                const result = await executeAction<ExecuteGetGameDetailsArgs, ContentType>(
-                    serverAPI,
-                    initActionSet,
+                const result = await executeAction<ExecuteGetGameDetailsArgs, ContentType>(initActionSet,
                     "Update",
                     { shortname: shortname }
                 );
@@ -204,11 +194,11 @@ export const GameDetailsItem: VFC<GameDetailsItemProperties> = ({ serverAPI, sho
     const onExeExit = () => {
         Navigation.CloseSideMenus();
         Navigation.Navigate(originRoute);
-        const modal = showModal(<GameDetailsItem shortname={shortname} initActionSet={initActionSet} serverAPI={serverAPI} closeModal={() => modal.Close()} />);
+        const modal = showModal(<GameDetailsItem shortname={shortname} initActionSet={initActionSet} closeModal={() => modal.Close()} />);
     };
 
     const runScript = async (actionSet: string, actionId: string, args: any) => {
-        const result = await executeAction<ExecuteGetGameDetailsArgs, ContentType>(serverAPI, actionSet, actionId, args, onExeExit);
+        const result = await executeAction<ExecuteGetGameDetailsArgs, ContentType>(actionSet, actionId, args, onExeExit);
         if (result?.Type == "Progress") {
             setLocalInstalling(true);
         }
@@ -221,9 +211,7 @@ export const GameDetailsItem: VFC<GameDetailsItemProperties> = ({ serverAPI, sho
             localInstallingRef.current = false;
             setLocalInstalling(false);
             try {
-                await executeAction(
-                    serverAPI,
-                    initActionSet,
+                await executeAction(initActionSet,
                     "CancelInstall",
                     { shortname: shortname }
                 );
@@ -251,9 +239,7 @@ export const GameDetailsItem: VFC<GameDetailsItemProperties> = ({ serverAPI, sho
     };
 
     const configureShortcut = async (id: number) => {
-        const result = await executeAction<ExecuteInstallArgs, ContentType>(
-            serverAPI,
-            initActionSet,
+        const result = await executeAction<ExecuteInstallArgs, ContentType>(initActionSet,
             "Install",
             {
                 shortname: shortname,
@@ -299,7 +285,7 @@ export const GameDetailsItem: VFC<GameDetailsItemProperties> = ({ serverAPI, sho
                 SteamClient.Apps.SpecifyCompatTool(id, "");
             }
             setLocalInstalling(false);
-            serverAPI.toaster.toast({
+            toaster.toast({
                 title: "GameVault",
                 body: "Launch options set",
             });
@@ -307,9 +293,7 @@ export const GameDetailsItem: VFC<GameDetailsItemProperties> = ({ serverAPI, sho
             await appDetailsStore.RequestAppDetails(id);
             setSteamClientID(id.toString());
         }
-        const imageResult = await executeAction<ExecuteGetGameDetailsArgs, GameImages>(
-            serverAPI,
-            initActionSet,
+        const imageResult = await executeAction<ExecuteGetGameDetailsArgs, GameImages>(initActionSet,
             "GetJsonImages",
             {
                 shortname: shortname
@@ -339,15 +323,6 @@ export const GameDetailsItem: VFC<GameDetailsItemProperties> = ({ serverAPI, sho
         }
     };
 
-    const cleanupIds = () => {
-        // Only clean up shortcuts named "bash" (our placeholder name from AddShortcut)
-        const apps = appStore.allApps.filter(app => app.display_name == "bash" && app.app_type == 1073741824);
-        for (const app of apps) {
-            logger.debug("removing shortcut", app.appid);
-            SteamClient.Apps.RemoveShortcut(app.appid);
-        }
-    };
-
     const getSteamId = async () => {
         const gameDetails = gameData.Content as GameDetails;
         const name = gameDetails.Name;
@@ -368,15 +343,6 @@ export const GameDetailsItem: VFC<GameDetailsItemProperties> = ({ serverAPI, sho
         await appDetailsStore.RequestAppDetails(id);
         SteamClient.Apps.SetShortcutName(id, (gameData.Content as GameDetails).Name);
         return id;
-    };
-
-    const install = async () => {
-        try {
-            const id = await getSteamId();
-            await configureShortcut(id);
-        } catch (error) {
-            logger.error(error);
-        }
     };
 
     return (
@@ -416,7 +382,6 @@ export const GameDetailsItem: VFC<GameDetailsItemProperties> = ({ serverAPI, sho
                     {gameData.Type === "Empty" && <Loading />}
                     {gameData.Type === "GameDetails" &&
                         <GameDisplay
-                            serverApi={serverAPI}
                             name={(gameData.Content as GameDetails).Name}
                             shortName={(gameData.Content as GameDetails).ShortName}
                             description={(gameData.Content as GameDetails).Description}

@@ -1,9 +1,9 @@
-import { Navigation } from "decky-frontend-lib";
-import { VFC, useEffect, useState } from "react";
+import { Navigation } from "@decky/ui";
+import { FC, useEffect, useState } from "react";
 import { QueueState, installQueue } from "../Utils/installQueue";
 import { FaDownload } from "react-icons/fa";
 
-export const DownloadBadge: VFC = () => {
+export const DownloadBadge: FC = () => {
     const [queueState, setQueueState] = useState<QueueState>(installQueue.getState());
 
     useEffect(() => {
@@ -46,7 +46,7 @@ export const DownloadBadge: VFC = () => {
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                     }}>
-                        {currentDownload.title} — {Math.round(currentDownload.progress)}%
+                        {currentDownload.title} Ã¢â‚¬â€ {Math.round(currentDownload.progress)}%
                     </div>
                 ) : (
                     <div style={{ fontSize: '12px' }}>

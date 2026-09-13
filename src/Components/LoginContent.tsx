@@ -1,5 +1,5 @@
-import { DialogButton, DialogLabel, Navigation, ServerAPI } from "decky-frontend-lib";
-import { ReactElement, VFC, useEffect, useState } from "react";
+import { DialogButton, DialogLabel, Navigation } from "@decky/ui";
+import { ReactElement, FC, useEffect, useState } from "react";
 import {
     ActionSet, ContentError, ContentResult, ContentType,
     ExecuteArgs, ExecuteLoginArgs, GetSettingArgs, LaunchOptions, LoginStatus,
@@ -11,7 +11,7 @@ import { ErrorDisplay } from "./ErrorDisplay";
 import { gameIDFromAppID } from "../Utils/utils";
 
 
-export const LoginContent: VFC<{ serverAPI: ServerAPI; initActionSet: string; initAction: string; }> = ({ serverAPI, initActionSet, initAction }) => {
+export const LoginContent: FC<{  initActionSet: string; initAction: string; }> = ({ initActionSet, initAction }) => {
     const logger = new Logger("LoginContent");
     const [content, setContent] = useState<ContentResult<ContentType>>({ Type: "Empty", Content: {} });
     const [actionSetName, setActionSetName] = useState<string>("");
@@ -25,7 +25,7 @@ export const LoginContent: VFC<{ serverAPI: ServerAPI; initActionSet: string; in
     }, [LoggedIn, actionSetName]);
     const updateLoginStatus = async () => {
         logger.debug("Updating login status with actionSetName: ", actionSetName);
-        const result = await executeAction<ExecuteArgs, ContentType>(serverAPI, actionSetName,
+        const result = await executeAction<ExecuteArgs, ContentType>(actionSetName,
             "GetContent",
             {
                 inputData: ""
@@ -51,7 +51,7 @@ export const LoginContent: VFC<{ serverAPI: ServerAPI; initActionSet: string; in
         SteamClient.Apps.SetShortcutLaunchOptions(id, launchOptions.Options);
         SteamClient.Apps.SetShortcutName(id, launchOptions.Name);
         logger.debug("Saving shortcut for login: ", id);
-        await executeAction<SaveSettingsArgs, ContentType>(serverAPI, actionSetName,
+        await executeAction<SaveSettingsArgs, ContentType>(actionSetName,
             "SaveSetting",
             {
                 name: "LoginSteamClientId",
@@ -83,7 +83,7 @@ export const LoginContent: VFC<{ serverAPI: ServerAPI; initActionSet: string; in
     };
     const login = async () => {
         try {
-            const launchOptionsResult = await executeAction<ExecuteArgs, LaunchOptions>(serverAPI, actionSetName,
+            const launchOptionsResult = await executeAction<ExecuteArgs, LaunchOptions>(actionSetName,
                 "LoginLaunchOptions", {});
             logger.debug("launchOptionsResult: ", launchOptionsResult);
             if (launchOptionsResult == null) {
@@ -100,7 +100,7 @@ export const LoginContent: VFC<{ serverAPI: ServerAPI; initActionSet: string; in
             const id = await getSteamClientId(launchOptions);
             const gameId = gameIDFromAppID(id);
 
-            await executeAction<ExecuteLoginArgs, ContentType>(serverAPI, actionSetName,
+            await executeAction<ExecuteLoginArgs, ContentType>(actionSetName,
                 "Login",
                 {
                     appId: String(id),
@@ -120,7 +120,7 @@ export const LoginContent: VFC<{ serverAPI: ServerAPI; initActionSet: string; in
     const logout = async () => {
         try {
             setContent({ Type: "Empty", Content: {} });
-            const data = await executeAction<ExecuteArgs, LoginStatus>(serverAPI, actionSetName,
+            const data = await executeAction<ExecuteArgs, LoginStatus>(actionSetName,
                 "Logout",
                 {
                     inputData: ""
@@ -139,7 +139,7 @@ export const LoginContent: VFC<{ serverAPI: ServerAPI; initActionSet: string; in
     const onInit = async () => {
         try {
             logger.debug(`Initializing LoginContent with initActionSet: ${initActionSet} and initAction: ${initAction}`);
-            const data = await executeAction<ExecuteArgs, ActionSet>(serverAPI, initActionSet,
+            const data = await executeAction<ExecuteArgs, ActionSet>(initActionSet,
                 initAction,
                 {
                     inputData: ""
@@ -147,7 +147,7 @@ export const LoginContent: VFC<{ serverAPI: ServerAPI; initActionSet: string; in
             logger.debug("init result: ", data);
             const result = data?.Content as ActionSet;
             
-            const tmp = await executeAction<GetSettingArgs, SettingsData>(serverAPI, result.SetName,
+            const tmp = await executeAction<GetSettingArgs, SettingsData>(result.SetName,
                 "GetSetting",
                 {
                     name: "LoginSteamClientId",

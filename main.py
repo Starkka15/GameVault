@@ -775,14 +775,25 @@ class Plugin:
 
     # ...
 
-    async def execute_action(
-        self, actionSet, actionName, inputData="", gameId="", appId="", *args, **kwargs
-    ):
+    async def execute_action(self, payload=None, **legacy_kwargs):
         try:
+            # Decky's new frontend API (`call`) delivers a single positional
+            # payload object; older callers may still pass keyword args. Support
+            # both so the calling convention change is transparent.
+            data = dict(payload) if isinstance(payload, dict) else {}
+            data.update(legacy_kwargs)
+
+            actionSet = data.pop("actionSet", "")
+            actionName = data.pop("actionName", "")
+            inputData = data.pop("inputData", data.pop("input_data", ""))
+            gameId = data.pop("gameId", data.pop("game_id", ""))
+            appId = data.pop("appId", data.pop("app_id", ""))
+            # Whatever remains are extra positional command args. Dict insertion
+            # order is preserved, matching the previous *kwargs.values() spread.
+            extra_args = list(data.values())
+
             decky_plugin.logger.info(f"execute_action: {actionSet} {actionName} ")
-            decky_plugin.logger.info(f"execute_action args: {args}")
-            if Helper.verbose:
-                decky_plugin.logger.info(f"execute_action kwargs: {kwargs}")
+            decky_plugin.logger.info(f"execute_action args: {extra_args}")
 
             if isinstance(inputData, (dict, list)):
                 inputData = json.dumps(inputData)
@@ -790,8 +801,7 @@ class Plugin:
             result = await Helper.execute_action(
                 actionSet,
                 actionName,
-                *args,
-                *kwargs.values(),
+                *extra_args,
                 input_data=inputData,
                 game_id=gameId,
                 app_id=appId,

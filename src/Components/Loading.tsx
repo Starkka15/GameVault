@@ -1,10 +1,10 @@
-import { SteamSpinner, quickAccessMenuClasses } from "decky-frontend-lib";
-import { VFC } from "react";
+import { SteamSpinner, quickAccessMenuClasses } from "@decky/ui";
+import { FC } from "react";
 import { steamSpinnerClasses } from '../staticClasses';
 
 const spinnerContainer = 'spinner-container';
 
-export const Loading: VFC = () => {
+export const Loading: FC = () => {
     return (
         <>
             <style>{`

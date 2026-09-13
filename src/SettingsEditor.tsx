@@ -1,9 +1,5 @@
-import {
-    Focusable,
-    PanelSection, Dropdown, ModalRootProps,
-    ScrollPanelGroup
-} from "decky-frontend-lib";
-import { VFC, useEffect, useState, useRef } from "react";
+import { Focusable, PanelSection, Dropdown, ModalRootProps, ScrollPanelGroup } from "@decky/ui";
+import { FC, useEffect, useState, useRef } from "react";
 import { ValueType, Section, ConfData, KeyValuePair, ActionSet, ContentError, ExecuteGetActionSetArgs } from "./Types/Types";
 import { SectionEditor } from "./Components/SectionEditor";
 import Logger from "./Utils/logger";
@@ -16,8 +12,8 @@ export interface ErrorModalProps extends ModalRootProps {
 }
 
 // Not used yet, but there are future plans for this.
-export const SettingsEditor: VFC<EditorProperties> = ({
-    serverAPI, initActionSet, initAction, contentId
+export const SettingsEditor: FC<EditorProperties> = ({
+    initActionSet, initAction, contentId
 }) => {
     const logger = new Logger("SettingsEditor")
     logger.log(`initActionSet: ${initActionSet}, initAction: ${initAction}, contentId: ${contentId}`)
@@ -43,9 +39,7 @@ export const SettingsEditor: VFC<EditorProperties> = ({
 
     }, []);
     const OnInit = async () => {
-        const actionSetResult = await executeAction<ExecuteGetActionSetArgs, ActionSet>(
-            serverAPI,
-            initActionSet,
+        const actionSetResult = await executeAction<ExecuteGetActionSetArgs, ActionSet>(initActionSet,
             initAction,
             {
                 content_id: contentId
@@ -58,9 +52,7 @@ export const SettingsEditor: VFC<EditorProperties> = ({
         
         logger.log("SetName: ", actionSetResult.Content.SetName)
         
-        const configDataResult = await executeAction<ExecuteGetActionSetArgs, ConfData>(
-            serverAPI,
-            actionSetResult.Content.SetName,
+        const configDataResult = await executeAction<ExecuteGetActionSetArgs, ConfData>(actionSetResult.Content.SetName,
             "GetContent",
             {
                 content_id: contentId
@@ -84,8 +76,7 @@ export const SettingsEditor: VFC<EditorProperties> = ({
     };
     return (
         <>
-            <ScrollPanelGroup 
-                focusable={false}
+            <ScrollPanelGroup
             >
                 <Focusable style={{ background: "inherit" }}>
                     <Focusable //style={{ display: "flex", marginTop: "0px" }}
@@ -97,8 +88,7 @@ export const SettingsEditor: VFC<EditorProperties> = ({
                             onSecondaryActionDescription="Save Settings"
                             onSecondaryButton={async () => {
                                 logger.log("Saving config: ", confData)
-                                const result = await executeAction(serverAPI,
-                                    actionSetName,
+                                const result = await executeAction(actionSetName,
                                     "SaveContent",
                                     {
                                         content_id: contentId,

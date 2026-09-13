@@ -1,8 +1,8 @@
 import { Section, KeyValuePair } from "../Types/Types";
-import { ButtonItem, PanelSectionRow, quickAccessMenuClasses } from "decky-frontend-lib";
+import { ButtonItem, PanelSectionRow, quickAccessMenuClasses } from "@decky/ui";
 import { RiArrowDownSFill, RiArrowUpSFill } from "react-icons/ri";
 import { FieldEditor } from "./FieldEditor";
-import { VFC, useEffect, useState } from "react";
+import { FC, useEffect, useState } from "react";
 
 export const sectionEditorFieldRoot = 'section-editor-field-editors';
 
@@ -13,7 +13,7 @@ interface SectionEditorProps {
     onChange: (section: Section) => void;
 }
 
-export const SectionEditor: VFC<SectionEditorProps> = ({ section, updateHelpText, modeLevel, onChange }) => {
+export const SectionEditor: FC<SectionEditorProps> = ({ section, updateHelpText, modeLevel, onChange }) => {
     // const [name, setName] = useState(section.Name);
     // const [description, setDescription] = useState(section.Description);
     const [options, setOptions] = useState(section.Options);

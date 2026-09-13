@@ -1,5 +1,6 @@
-import { ServerAPI, sleep } from "decky-frontend-lib";
-import { ContentResult, ContentType, ExecuteGetGameDetailsArgs, ExecuteInstallArgs, GameDetails, GameImages, LaunchOptions, ProgressUpdate } from "../Types/Types";
+import { sleep } from "@decky/ui";
+import { toaster } from "@decky/api";
+import { ContentType, ExecuteGetGameDetailsArgs, ExecuteInstallArgs, GameDetails, GameImages, LaunchOptions, ProgressUpdate } from "../Types/Types";
 import { executeAction } from "./executeAction";
 import Logger from "./logger";
 
@@ -30,16 +31,11 @@ class InstallQueue {
         isProcessing: false,
     };
     private listeners: Set<QueueListener> = new Set();
-    private serverAPI: ServerAPI | null = null;
     private cancelled = false;
     private runGeneration = 0;
 
     constructor() {
         this.restoreState();
-    }
-
-    setServerAPI(api: ServerAPI) {
-        this.serverAPI = api;
     }
 
     subscribe(listener: QueueListener) {
@@ -104,7 +100,6 @@ class InstallQueue {
      * that survived a GameVault close/reopen.
      */
     async reconnect() {
-        if (!this.serverAPI) return;
         const pendingItems = this.state.items.filter(i => i.status === "queued");
         if (pendingItems.length === 0) return;
 
@@ -112,7 +107,7 @@ class InstallQueue {
         for (const item of pendingItems) {
             try {
                 const progressResult = await executeAction<ExecuteGetGameDetailsArgs, ProgressUpdate>(
-                    this.serverAPI, item.initActionSet, "GetProgress", { shortname: item.shortname }
+                    item.initActionSet, "GetProgress", { shortname: item.shortname }
                 );
                 if (progressResult && progressResult.Content) {
                     const progress = progressResult.Content;
@@ -171,11 +166,11 @@ class InstallQueue {
 
     async cancelItem(shortname: string) {
         const item = this.state.items.find(i => i.shortname === shortname);
-        if (!item || !this.serverAPI) return;
+        if (!item) return;
         if (item.status === "downloading") {
             try {
                 await executeAction<ExecuteGetGameDetailsArgs, ContentType>(
-                    this.serverAPI, item.initActionSet, "CancelInstall", { shortname }
+                    item.initActionSet, "CancelInstall", { shortname }
                 );
             } catch (e) {
                 logger.error("Failed to cancel download", e);
@@ -191,9 +186,9 @@ class InstallQueue {
         }
         // Cancel any active downloads
         const downloading = this.state.items.find(i => i.status === "downloading");
-        if (downloading && this.serverAPI) {
+        if (downloading) {
             executeAction<ExecuteGetGameDetailsArgs, ContentType>(
-                this.serverAPI, downloading.initActionSet, "CancelInstall", { shortname: downloading.shortname }
+                downloading.initActionSet, "CancelInstall", { shortname: downloading.shortname }
             ).catch(() => {});
         }
         this.state.items = [];
@@ -250,7 +245,7 @@ class InstallQueue {
     }
 
     async start() {
-        if (!this.serverAPI || this.state.isProcessing) return;
+        if (this.state.isProcessing) return;
         this.cancelled = false;
         this.runGeneration++;
         const myGeneration = this.runGeneration;
@@ -270,24 +265,20 @@ class InstallQueue {
         this.notify();
 
         // Toast completion summary
-        if (this.serverAPI) {
-            const done = this.state.items.filter(i => i.status === "done").length;
-            const errors = this.state.items.filter(i => i.status === "error").length;
-            const total = done + errors;
-            if (total > 0) {
-                this.serverAPI.toaster.toast({
-                    title: "GameVault",
-                    body: errors > 0
-                        ? `${done}/${total} games installed (${errors} failed)`
-                        : `${done} game${done > 1 ? 's' : ''} installed successfully`,
-                });
-            }
+        const done = this.state.items.filter(i => i.status === "done").length;
+        const errors = this.state.items.filter(i => i.status === "error").length;
+        const total = done + errors;
+        if (total > 0) {
+            toaster.toast({
+                title: "GameVault",
+                body: errors > 0
+                    ? `${done}/${total} games installed (${errors} failed)`
+                    : `${done} game${done > 1 ? 's' : ''} installed successfully`,
+            });
         }
     }
 
     private async processItem(item: QueueItem) {
-        const api = this.serverAPI!;
-
         // Step 1: Start download
         item.status = "downloading";
         item.description = "Starting download...";
@@ -295,7 +286,7 @@ class InstallQueue {
 
         try {
             const downloadResult = await executeAction<ExecuteGetGameDetailsArgs, ContentType>(
-                api, item.initActionSet, "Download", { shortname: item.shortname }
+                item.initActionSet, "Download", { shortname: item.shortname }
             );
 
             if (!downloadResult || downloadResult.Type !== "Progress") {
@@ -315,7 +306,7 @@ class InstallQueue {
                 if (!this.state.items.includes(item)) return;
 
                 const progressResult = await executeAction<ExecuteGetGameDetailsArgs, ProgressUpdate>(
-                    api, item.initActionSet, "GetProgress", { shortname: item.shortname }
+                    item.initActionSet, "GetProgress", { shortname: item.shortname }
                 );
 
                 if (!progressResult) continue;
@@ -345,7 +336,7 @@ class InstallQueue {
 
             if (this.cancelled) {
                 await executeAction<ExecuteGetGameDetailsArgs, ContentType>(
-                    api, item.initActionSet, "CancelInstall", { shortname: item.shortname }
+                    item.initActionSet, "CancelInstall", { shortname: item.shortname }
                 );
                 item.status = "queued";
                 item.description = "Cancelled";
@@ -360,7 +351,7 @@ class InstallQueue {
 
             // Get game details for the name
             const detailsResult = await executeAction<ExecuteGetGameDetailsArgs, GameDetails>(
-                api, item.initActionSet, "GetDetails", { shortname: item.shortname }
+                item.initActionSet, "GetDetails", { shortname: item.shortname }
             );
 
             if (!detailsResult) {
@@ -399,7 +390,7 @@ class InstallQueue {
 
             // Call Install action to get launch options
             const installResult = await executeAction<ExecuteInstallArgs, ContentType>(
-                api, item.initActionSet, "Install",
+                item.initActionSet, "Install",
                 { shortname: item.shortname, steamClientID: steamId.toString() }
             );
 
@@ -443,7 +434,7 @@ class InstallQueue {
             this.notify();
 
             const imageResult = await executeAction<ExecuteGetGameDetailsArgs, GameImages>(
-                api, item.initActionSet, "GetJsonImages", { shortname: item.shortname }
+                item.initActionSet, "GetJsonImages", { shortname: item.shortname }
             );
 
             if (imageResult) {

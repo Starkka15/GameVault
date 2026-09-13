@@ -1,11 +1,11 @@
-import { PanelSection, ModalRoot, Focusable, } from "decky-frontend-lib";
-import { VFC } from "react";
+import { PanelSection, ModalRoot, Focusable } from "@decky/ui";
+import { FC } from "react";
 import { ErrorModalProps } from "./ConfEditor";
 import { ErrorDisplay } from "./Components/ErrorDisplay";
 import { addAchievement } from "./Utils/achievements";
 
 
-export const ErrorModal: VFC<ErrorModalProps> = ({ Error, onCancel, onOK, onEscKeypress, bAllowFullSize, bCancelDisabled, bOKDisabled, closeModal }) => {
+export const ErrorModal: FC<ErrorModalProps> = ({ Error, onCancel, onOK, onEscKeypress, bAllowFullSize, bCancelDisabled, bOKDisabled, closeModal }) => {
     addAchievement("MQ==")
     return (
         <ModalRoot
@@ -17,8 +17,7 @@ export const ErrorModal: VFC<ErrorModalProps> = ({ Error, onCancel, onOK, onEscK
             bOKDisabled={bOKDisabled}
             closeModal={closeModal}
         >
-            <Focusable
-                focusable={true} noFocusRing={false}>
+            <Focusable noFocusRing={false}>
                 <PanelSection title="GameVault Error">
                     <ErrorDisplay error={Error} />
 

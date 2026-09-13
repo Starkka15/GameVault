@@ -1,7 +1,7 @@
 // Define the game image
 
-import { Focusable, Spinner } from "decky-frontend-lib";
-import { VFC, useEffect, useRef, useState } from 'react';
+import { Focusable, Spinner } from "@decky/ui";
+import { FC, useEffect, useRef, useState } from 'react';
 import { GameData } from '../Types/Types';
 import { FaGears } from "react-icons/fa6";
 import { focusRingClasses, libraryAssetImageClasses } from '../staticClasses';
@@ -16,7 +16,7 @@ interface GameGridItemProps {
     isSelected?: boolean;
 }
 
-const GameGridItem: VFC<GameGridItemProps> = ({ gameData, imgAreaWidth, imgAreaHeight, onClick, noName, selectMode, isSelected }) => {
+const GameGridItem: FC<GameGridItemProps> = ({ gameData, imgAreaWidth, imgAreaHeight, onClick, noName, selectMode, isSelected }) => {
     const [isFocused, setIsFocused] = useState(false);
     const [isImgLoaded, setIsImgLoaded] = useState(false);
     const [imgError, setImgError] = useState(false);
@@ -128,7 +128,7 @@ interface ScreenBoundCheckerProps extends Pick<GameGridItemProps, 'imgAreaWidth'
     marginBottom: string;
 }
 
-const ScreenBoundChecker: VFC<ScreenBoundCheckerProps> = ({ imgAreaWidth, imgAreaHeight, marginBottom, onEnterBounds }) => {
+const ScreenBoundChecker: FC<ScreenBoundCheckerProps> = ({ imgAreaWidth, imgAreaHeight, marginBottom, onEnterBounds }) => {
     const topRef = useRef<HTMLDivElement>(null);
     useEffect(() => {
         const observer = new IntersectionObserver(([entry]) => entry.isIntersecting && onEnterBounds(), { root: null, threshold: 0 });

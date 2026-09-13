@@ -1,22 +1,23 @@
-import { Dropdown, Focusable, ServerAPI } from "decky-frontend-lib";
-import { VFC, useEffect, useState } from "react";
+import { Dropdown, Focusable } from "@decky/ui";
+import { call } from "@decky/api";
+import { FC, useEffect, useState } from "react";
 import Logger from "./Utils/logger";
 import { LogFile } from "./Types/Types";
 import { ScrollableWindowRelative } from './ScrollableWindow';
 
 
-export const LogViewer: VFC<{ serverAPI: ServerAPI; }> = ({ serverAPI }) => {
+export const LogViewer: FC = () => {
     const [logs, setLogs] = useState<LogFile[]>([] as LogFile[]);
     const [logContent, setLogContent] = useState("");
     const logger = new Logger("LogViewer");
     const fetchLogs = async () => {
         try {
-            const response = await serverAPI.callPluginMethod<object, LogFile[]>("get_logs", {});
+            const response = await call<[], LogFile[]>("get_logs");
             logger.log(response);
-            if (response.result instanceof Array) {
-                setLogs(response.result);
-                if (response.result.length > 0) {
-                    setLogContent(response.result[0].Content);
+            if (response instanceof Array) {
+                setLogs(response);
+                if (response.length > 0) {
+                    setLogContent(response[0].Content);
                 }
             }
         } catch (e) {

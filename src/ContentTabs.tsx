@@ -1,5 +1,5 @@
-import { DialogBody, DialogControlsSection, ServerAPI, SidebarNavigation, SidebarNavigationPage, Tab, Tabs } from "decky-frontend-lib";
-import { VFC, useEffect, useRef, useState } from "react";
+import { DialogBody, DialogControlsSection, SidebarNavigation, SidebarNavigationPage, Tab, Tabs } from "@decky/ui";
+import { FC, useEffect, useRef, useState } from "react";
 import { ActionSet, ContentType, ContentError, ContentResult, ExecuteArgs, ExecuteGetContentArgs, StoreContent, StoreTabsContent, GameDataList } from "./Types/Types";
 import Logger from "./Utils/logger";
 import { executeAction } from "./Utils/executeAction";
@@ -12,7 +12,7 @@ import { MainMenu } from "./MainMenu";
 import { useCachedState } from './hooks/useCachedState';
 import { gamepadLibraryClasses } from './staticClasses';
 interface ContentTabsProperties {
-    serverAPI: ServerAPI;
+    
     content: StoreTabsContent;
     initActionSet: string;
     initAction: string;
@@ -23,14 +23,14 @@ export interface StoreTabsState {
     currentTab: string;
 }
 
-export const ContentTabs: VFC<ContentTabsProperties> = ({ serverAPI, content, initAction, initActionSet, layout, subActionSet }) => {
+export const ContentTabs: FC<ContentTabsProperties> = ({ content, initAction, initActionSet, layout, subActionSet }) => {
     const logger = new Logger("StoreTabs");
     const { cacheState: cacheData, setCacheState: setCacheData } = useCachedState(initActionSet, initAction, 'tabcontent', { currentTab: "-1" });
 
     const getTabs: () => Tab[] = () => {
         return content.Tabs.map((tab, index) => ({
             title: tab.Title,
-            content: <Content key={tab.ActionId} serverAPI={serverAPI} initActionSet={subActionSet} initAction={tab.ActionId} />,
+            content: <Content key={tab.ActionId} initActionSet={subActionSet} initAction={tab.ActionId} />,
             id: index.toString()
         }));
     };
@@ -38,7 +38,7 @@ export const ContentTabs: VFC<ContentTabsProperties> = ({ serverAPI, content, in
     const getPages: () => SidebarNavigationPage[] = () => {
         return content.Tabs.map((tab) => ({
             title: tab.Title,
-            content: <Content key={tab.ActionId} serverAPI={serverAPI} initActionSet={subActionSet} initAction={tab.ActionId} />,
+            content: <Content key={tab.ActionId} initActionSet={subActionSet} initAction={tab.ActionId} />,
             identifier: tab.Title,
             hideTitle: true
         }));
@@ -71,7 +71,7 @@ export const ContentTabs: VFC<ContentTabsProperties> = ({ serverAPI, content, in
 const contentCache: Map<string, { data: ContentResult<ContentType>; actionSet: string; time: number }> = new Map();
 const CONTENT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-export const Content: VFC<{ serverAPI: ServerAPI; initActionSet: string; initAction: string; closeModal?: ()=>void}> = ({ serverAPI, initActionSet, initAction, closeModal }) => {
+export const Content: FC<{  initActionSet: string; initAction: string; closeModal?: ()=>void}> = ({ initActionSet, initAction, closeModal }) => {
     const logger = new Logger("Content");
     const [content, setContent] = useState<ContentResult<ContentType>>({ Type: "Empty", Content: {} });
     const [actionSetName, setActionSetName] = useState("");
@@ -99,7 +99,7 @@ export const Content: VFC<{ serverAPI: ServerAPI; initActionSet: string; initAct
                 }
 
                 logger.debug(`Initializing Content with initActionSet: ${initActionSet} and initAction: ${initAction}`);
-                const actionSetRes = await executeAction<ExecuteArgs,ActionSet>(serverAPI, initActionSet, initAction, {});
+                const actionSetRes = await executeAction<ExecuteArgs,ActionSet>(initActionSet, initAction, {});
                 logger.debug("init result: ", actionSetRes);
                 if (actionSetRes === null) return;
 
@@ -118,7 +118,7 @@ export const Content: VFC<{ serverAPI: ServerAPI; initActionSet: string; initAct
         })();
     }, []);
 
-    const getContent = async (actionSet: string, actionArgs: { [param: string]: string; }) => executeAction<ExecuteGetContentArgs, ContentResult<ContentType>>(serverAPI, actionSet, "GetContent", actionArgs);
+    const getContent = async (actionSet: string, actionArgs: { [param: string]: string; }) => executeAction<ExecuteGetContentArgs, ContentResult<ContentType>>(actionSet, "GetContent", actionArgs);
 
     const refreshContent = (args: { [param: string]: any; }, onFinish?: () => void) => {
         (async () => {
@@ -137,7 +137,6 @@ export const Content: VFC<{ serverAPI: ServerAPI; initActionSet: string; initAct
     switch (content.Type) {
         case "GameGrid":
             return <GridContent
-                serverAPI={serverAPI}
                 content={content.Content as GameDataList}
                 initActionSet={actionSetName}
                 refreshContent={refreshContent}
@@ -147,7 +146,6 @@ export const Content: VFC<{ serverAPI: ServerAPI; initActionSet: string; initAct
 
         case "StoreTabs":
             return <ContentTabs
-                serverAPI={serverAPI}
                 content={content.Content as StoreTabsContent}
                 layout="horizontal"
                 initAction={initAction}
@@ -157,7 +155,6 @@ export const Content: VFC<{ serverAPI: ServerAPI; initActionSet: string; initAct
 
         case "SideBarPage":
             return <ContentTabs
-                serverAPI={serverAPI}
                 content={content.Content as StoreTabsContent}
                 layout="vertical"
                 initAction={initAction}
@@ -166,8 +163,7 @@ export const Content: VFC<{ serverAPI: ServerAPI; initActionSet: string; initAct
             />;
 
         case "MainMenu":
-            return <MainMenu //key={initActionSet + "_" + initAction} 
-                serverApi={serverAPI}
+            return <MainMenu //key={initActionSet + "_" + initAction}
                 content={content.Content as StoreContent}
                 initActionSet={actionSetName}
                 initAction=""

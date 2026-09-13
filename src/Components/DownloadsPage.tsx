@@ -1,9 +1,9 @@
-import { DialogBody, DialogButton, Focusable, Navigation, ProgressBar } from "decky-frontend-lib";
-import { VFC, useEffect, useState } from "react";
+import { DialogBody, DialogButton, Focusable, Navigation, ProgressBar } from "@decky/ui";
+import { FC, useEffect, useState } from "react";
 import { QueueItem, QueueState, installQueue } from "../Utils/installQueue";
 import { FaArrowDown, FaArrowUp, FaPlay, FaTimes, FaTrash } from "react-icons/fa";
 
-export const DownloadsPage: VFC = () => {
+export const DownloadsPage: FC = () => {
     const [queueState, setQueueState] = useState<QueueState>(installQueue.getState());
 
     useEffect(() => {
@@ -106,7 +106,7 @@ export const DownloadsPage: VFC = () => {
     );
 };
 
-const SectionHeader: VFC<{ title: string; count: number }> = ({ title, count }) => (
+const SectionHeader: FC<{ title: string; count: number }> = ({ title, count }) => (
     <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -135,7 +135,7 @@ const SectionHeader: VFC<{ title: string; count: number }> = ({ title, count }) 
     </div>
 );
 
-const DownloadingItem: VFC<{ item: QueueItem }> = ({ item }) => (
+const DownloadingItem: FC<{ item: QueueItem }> = ({ item }) => (
     <Focusable style={{
         display: 'flex',
         alignItems: 'center',
@@ -183,7 +183,7 @@ const DownloadingItem: VFC<{ item: QueueItem }> = ({ item }) => (
     </Focusable>
 );
 
-const QueuedItem: VFC<{ item: QueueItem; isFirst: boolean; isLast: boolean }> = ({ item, isFirst, isLast }) => (
+const QueuedItem: FC<{ item: QueueItem; isFirst: boolean; isLast: boolean }> = ({ item, isFirst, isLast }) => (
     <Focusable style={{
         display: 'flex',
         alignItems: 'center',
@@ -246,7 +246,7 @@ const QueuedItem: VFC<{ item: QueueItem; isFirst: boolean; isLast: boolean }> = 
     </Focusable>
 );
 
-const CompletedItem: VFC<{ item: QueueItem }> = ({ item }) => (
+const CompletedItem: FC<{ item: QueueItem }> = ({ item }) => (
     <Focusable style={{
         display: 'flex',
         alignItems: 'center',
@@ -273,7 +273,7 @@ const CompletedItem: VFC<{ item: QueueItem }> = ({ item }) => (
     </Focusable>
 );
 
-const ErrorItem: VFC<{ item: QueueItem }> = ({ item }) => (
+const ErrorItem: FC<{ item: QueueItem }> = ({ item }) => (
     <Focusable style={{
         display: 'flex',
         alignItems: 'center',

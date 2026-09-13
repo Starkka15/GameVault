@@ -1,17 +1,10 @@
-import {
-  definePlugin,
-  Navigation,
-  ServerAPI,
-  showModal,
-  staticClasses,
-  useParams
-} from "decky-frontend-lib";
+import { definePlugin, routerHook, toaster } from "@decky/api";
+import { Navigation, showModal, staticClasses, useParams } from "@decky/ui";
 import { FaBoxOpen } from "react-icons/fa";
 
 import { Content } from "./ContentTabs";
 import { About } from "./About";
-import { addAchievement, getAchievementDetails, toastAchievement, toastFactory } from "./Utils/achievements";
-import Logger from "./Utils/logger";
+import { addAchievement, toastFactory } from "./Utils/achievements";
 import { MainMenuModal } from "./MainMenuModal";
 import { DownloadsPage } from "./Components/DownloadsPage";
 import { installQueue } from "./Utils/installQueue";
@@ -19,11 +12,10 @@ import { installQueue } from "./Utils/installQueue";
 
 
 
-//@ts-ignore
-export default definePlugin((serverApi: ServerAPI) => {
+export default definePlugin(() => {
 
 
-  toastFactory(serverApi.toaster);
+  toastFactory(toaster);
   let l3Pressed = false;
   let r3Pressed = false;
   let modalDebounce = false;
@@ -45,7 +37,7 @@ export default definePlugin((serverApi: ServerAPI) => {
       if (l3Pressed && r3Pressed && doubleStickEnabled && !modalDebounce) {
         modalDebounce = true;
         Navigation.CloseSideMenus();
-        showModal(<MainMenuModal serverApi={serverApi} />);
+        showModal(<MainMenuModal />);
         setTimeout(() => { modalDebounce = false; }, 1000);
       }
     })
@@ -64,26 +56,26 @@ export default definePlugin((serverApi: ServerAPI) => {
     addAchievement("MTEw")
   }
 
-  serverApi.routerHook.addRoute(
+  routerHook.addRoute(
     "/gamevault-content/:initActionSet/:initAction",
     () => {
       const { initActionSet, initAction } = useParams<{ initActionSet: string; initAction: string }>();
-      return <Content key={initActionSet + "_" + initAction} serverAPI={serverApi} initActionSet={initActionSet} initAction={initAction} />;
+      return <Content key={initActionSet + "_" + initAction} initActionSet={initActionSet} initAction={initAction} />;
     },
     {
       exact: true,
     }
   );
-  serverApi.routerHook.addRoute(
+  routerHook.addRoute(
     "/about-gamevault",
     () => {
-      return <About serverAPI={serverApi} />
+      return <About />
     },
     {
       exact: true,
     }
   );
-  serverApi.routerHook.addRoute(
+  routerHook.addRoute(
     "/gamevault-downloads",
     () => {
       return <DownloadsPage />
@@ -92,21 +84,21 @@ export default definePlugin((serverApi: ServerAPI) => {
       exact: true,
     }
   );
-  // Initialize install queue with server API and reconnect to any in-progress downloads
-  installQueue.setServerAPI(serverApi);
+  // Reconnect to any in-progress downloads that survived a close/reopen
   installQueue.reconnect();
 
 
 
 
   return {
-    title: <div className={staticClasses.Title}>GameVault</div>,
-    content: <Content serverAPI={serverApi} initActionSet="init" initAction="InitActions" />,
+    name: "GameVault",
+    titleView: <div className={staticClasses.Title}>GameVault</div>,
+    content: <Content initActionSet="init" initAction="InitActions" />,
     icon: <FaBoxOpen />,
     onDismount() {
-      serverApi.routerHook.removeRoute("/gamevault-content/:initActionSet/:initAction");
-      serverApi.routerHook.removeRoute("/about-gamevault");
-      serverApi.routerHook.removeRoute("/gamevault-downloads");
+      routerHook.removeRoute("/gamevault-content/:initActionSet/:initAction");
+      routerHook.removeRoute("/about-gamevault");
+      routerHook.removeRoute("/gamevault-downloads");
       unregister.unregister();
       installQueue.clear();
     },

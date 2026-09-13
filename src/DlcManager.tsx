@@ -1,16 +1,5 @@
-import { VFC, useEffect, useState } from "react";
-import {
-    ModalRoot,
-    DialogButton,
-    PanelSection,
-    PanelSectionRow,
-    SteamSpinner,
-    ProgressBar,
-    ConfirmModal,
-    showModal,
-    ServerAPI,
-    Focusable,
-} from "decky-frontend-lib";
+import { FC, useEffect, useState } from "react";
+import { ModalRoot, DialogButton, PanelSection, PanelSectionRow, SteamSpinner, ProgressBar, ConfirmModal, showModal, Focusable } from "@decky/ui";
 import { executeAction } from "./Utils/executeAction";
 import { ContentType, ExecuteArgs, ProgressUpdate, SuccessContent } from "./Types/Types";
 import Logger from "./Utils/logger";
@@ -35,7 +24,7 @@ interface DlcActionArgs extends ExecuteArgs {
 }
 
 export interface DlcManagerProperties {
-    serverAPI: ServerAPI;
+    
     initActionSet: string;   // "GOGActions"
     shortName: string;
     name: string;
@@ -43,8 +32,8 @@ export interface DlcManagerProperties {
     refreshParent?: () => void;
 }
 
-export const DlcManager: VFC<DlcManagerProperties> = ({
-    serverAPI, initActionSet, shortName, name, closeModal, refreshParent,
+export const DlcManager: FC<DlcManagerProperties> = ({
+    initActionSet, shortName, name, closeModal, refreshParent,
 }) => {
     const logger = new Logger("DlcManager");
     const [loading, setLoading] = useState(true);
@@ -57,8 +46,7 @@ export const DlcManager: VFC<DlcManagerProperties> = ({
     const loadDlcs = async () => {
         setLoading(true);
         setError("");
-        const res = await executeAction<DlcListArgs, DlcListContent>(
-            serverAPI, initActionSet, "GetDlcs", { shortName });
+        const res = await executeAction<DlcListArgs, DlcListContent>(initActionSet, "GetDlcs", { shortName });
         setLoading(false);
         if (!res || !res.Content) {
             setError("Could not load DLC list.");
@@ -75,8 +63,7 @@ export const DlcManager: VFC<DlcManagerProperties> = ({
     // Poll GetProgress until the DLC download finishes, then refresh the list.
     const pollProgress = () => {
         const timer = setInterval(async () => {
-            const res = await executeAction<DlcListArgs, ProgressUpdate>(
-                serverAPI, initActionSet, "GetProgress", { shortName });
+            const res = await executeAction<DlcListArgs, ProgressUpdate>(initActionSet, "GetProgress", { shortName });
             const p = res?.Content as ProgressUpdate | undefined;
             if (!p) return;
             setProgress(p);
@@ -100,17 +87,15 @@ export const DlcManager: VFC<DlcManagerProperties> = ({
     const installDlc = async (dlc: DlcInfo) => {
         logger.log(`install DLC ${dlc.Id} (${dlc.Title})`);
         setBusyId(dlc.Id);
-        setProgress({ Percentage: 0, Description: "Starting…" } as ProgressUpdate);
-        await executeAction<DlcActionArgs, ContentType>(
-            serverAPI, initActionSet, "InstallDlc", { shortName, dlcId: dlc.Id });
+        setProgress({ Percentage: 0, Description: "StartingÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦" } as ProgressUpdate);
+        await executeAction<DlcActionArgs, ContentType>(initActionSet, "InstallDlc", { shortName, dlcId: dlc.Id });
         pollProgress();
     };
 
     const removeDlc = async (dlc: DlcInfo) => {
         logger.log(`remove DLC ${dlc.Id} (${dlc.Title})`);
         setBusyId(dlc.Id);
-        const res = await executeAction<DlcActionArgs, SuccessContent>(
-            serverAPI, initActionSet, "RemoveDlc", { shortName, dlcId: dlc.Id });
+        const res = await executeAction<DlcActionArgs, SuccessContent>(initActionSet, "RemoveDlc", { shortName, dlcId: dlc.Id });
         setBusyId(null);
         if (res?.Type === "Error") {
             setError("Failed to remove DLC.");
@@ -132,11 +117,11 @@ export const DlcManager: VFC<DlcManagerProperties> = ({
     return (
         <ModalRoot bAllowFullSize={true} closeModal={closeModal}>
             <div style={{ fontWeight: "bold", fontSize: "1.3em", marginBottom: "4px" }}>
-                DLC — {name}
+                DLC ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â {name}
             </div>
             <div style={{ fontSize: "0.8em", opacity: 0.6, marginBottom: "8px" }}>
                 Note: DLC that replaces existing game files (e.g. uncensor / patch DLC) can't be
-                fully removed — Remove clears its marker and any files it added, but modified base
+                fully removed ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Remove clears its marker and any files it added, but modified base
                 files stay as-is. Reinstalling re-applies it.
             </div>
 
@@ -161,13 +146,13 @@ export const DlcManager: VFC<DlcManagerProperties> = ({
                                         <div style={{ fontWeight: "bold" }}>{dlc.Title}</div>
                                         <div style={{ fontSize: "0.8em", opacity: 0.7 }}>
                                             {dlc.Installed ? "Installed" : "Not installed"}
-                                            {dlc.Size ? ` · ${dlc.Size}` : ""}
+                                            {dlc.Size ? ` ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ${dlc.Size}` : ""}
                                         </div>
                                         {downloading && (
                                             <ProgressBar
                                                 nProgress={progress!.Percentage}
                                                 indeterminate={progress!.Percentage <= 0}
-                                                sOperationText={progress!.Description || "Installing…"}
+                                                sOperationText={progress!.Description || "InstallingÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦"}
                                             />
                                         )}
                                     </div>
@@ -186,7 +171,7 @@ export const DlcManager: VFC<DlcManagerProperties> = ({
                                                 onClick={() => installDlc(dlc)}
                                                 style={{ minWidth: "110px" }}
                                             >
-                                                {busyId === dlc.Id ? "Installing…" : "Install"}
+                                                {busyId === dlc.Id ? "InstallingÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦" : "Install"}
                                             </DialogButton>
                                         )}
                                     </div>

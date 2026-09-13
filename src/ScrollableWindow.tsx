@@ -1,5 +1,5 @@
-import { Focusable, ModalPosition, GamepadButton, ScrollPanelGroup, gamepadDialogClasses, scrollPanelClasses, FooterLegendProps } from "decky-frontend-lib";
-import { FC, useLayoutEffect, useRef, useState } from "react";
+import { Focusable, ModalPosition, GamepadButton, ScrollPanelGroup, gamepadDialogClasses, scrollPanelClasses, FooterLegendProps } from "@decky/ui";
+import { FC, ReactNode, useLayoutEffect, useRef, useState } from "react";
 
 export interface ScrollableWindowProps extends FooterLegendProps {
     height: string;
@@ -7,6 +7,7 @@ export interface ScrollableWindowProps extends FooterLegendProps {
     scrollBarWidth?: string;
     alwaysFocus?: boolean;
     noScrollDescription?: boolean;
+    children?: ReactNode;
 
     onActivate?: (e: CustomEvent) => void;
     onCancel?: (e: CustomEvent) => void;
@@ -33,7 +34,7 @@ export const ScrollableWindow: FC<ScrollableWindowProps> = ({ height, fadeAmount
 
     const panel = (
         //@ts-ignore
-        <ScrollPanelGroup ref={scrollPanelRef} focusable={false} style={{ flex: 1, minHeight: 0 }}>
+        <ScrollPanelGroup ref={scrollPanelRef} style={{ flex: 1, minHeight: 0 }}>
             <Focusable
                 //@ts-ignore
                 focusable={alwaysFocus || isOverflowing}

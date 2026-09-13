@@ -26,6 +26,10 @@ interface SteamClient {
         SetShortcutStartDir: (appId: number, directory: string) => void;
         SetCustomArtworkForApp: (appId: number, base64Image: string, imageType: string, assetType: AppArtworkAssetType) => Promise<any>;
         SpecifyCompatTool: (appId: number, strToolName: string) => void;
+        GetAvailableCompatTools: (appId: number) => Promise<CompatTool[]>;
+    };
+    Input: {
+        RegisterForControllerInputMessages: (callback: (e: ControllerInputMessage[]) => void) => { unregister: () => void; };
     };
     GameSessions: {
         RegisterForAppLifetimeNotifications: (callback: (data: LifetimeNotification) => void) => { unregister: () => void; };
@@ -45,3 +49,18 @@ interface SteamClient {
         OpenInstallWizard: (appIds: number[]) => void;
     }
 }
+
+interface CompatTool {
+    strToolName: string;
+    CompatToolName: string;
+    strDisplayName?: string;
+}
+
+interface ControllerInputMessage {
+    nA: number;
+    bS: boolean;
+}
+
+// Steam UI internal stores/caches — untyped internals exposed on the global scope.
+declare const appDetailsCache: any;
+declare const settingsStore: any;

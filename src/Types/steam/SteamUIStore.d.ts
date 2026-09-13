@@ -1,4 +1,4 @@
-import { WindowRouter, WindowStore } from 'decky-frontend-lib';
+import { WindowRouter, WindowStore } from "@decky/ui";
 
 type SteamUiStore = {
     MainRunningAppID?: number;

@@ -1,5 +1,5 @@
-import { Focusable, ModalRoot, ModalRootProps, PanelSection, ServerAPI, gamepadTabbedPageClasses, showModal } from "decky-frontend-lib";
-import { VFC, useState } from "react";
+import { Focusable, ModalRoot, ModalRootProps, PanelSection, gamepadTabbedPageClasses, showModal } from "@decky/ui";
+import { FC, useState } from "react";
 import { AchievementDetails, addAchievement, getAchievementDetails, getAchievements, hasAchievement } from "./Utils/achievements";
 import { IconContext } from "react-icons";
 import { contentTabsContainerClass, gridContentContainerClass } from "./Components/GridContent";
@@ -7,7 +7,7 @@ export interface AchievementModalProps extends ModalRootProps {
     achievement: AchievementDetails;
 
 }
-export const AchievementDisplay:VFC<AchievementModalProps> = ({ achievement, onCancel, onOK, onEscKeypress, bAllowFullSize, bCancelDisabled, bOKDisabled, closeModal }) => {
+export const AchievementDisplay:FC<AchievementModalProps> = ({ achievement, onCancel, onOK, onEscKeypress, bAllowFullSize, bCancelDisabled, bOKDisabled, closeModal }) => {
     return (
         <ModalRoot
             onCancel={onCancel}
@@ -18,8 +18,7 @@ export const AchievementDisplay:VFC<AchievementModalProps> = ({ achievement, onC
             bOKDisabled={bOKDisabled}
             closeModal={closeModal}
         >
-            <Focusable
-                focusable={true} noFocusRing={false}>
+            <Focusable noFocusRing={false}>
                 <PanelSection title="Achievement">
                     <div>
                         <IconContext.Provider value={{ className: "shared-class", size: 100 }}>
@@ -39,7 +38,7 @@ export const AchievementDisplay:VFC<AchievementModalProps> = ({ achievement, onC
     );
 };
 
-export const Achievements: VFC<{ serverAPI: ServerAPI; }> = ({ serverAPI }) => {
+export const Achievements: FC = () => {
 
     const [achievements, setAchievements] = useState(getAchievements())
     

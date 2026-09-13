@@ -1,20 +1,21 @@
-import { ConfirmModal, DialogBody, DialogButton, DialogControlsSection, Field, Focusable, Navigation, PanelSection, ServerAPI, SidebarNavigation, TextField, ToggleField, showModal } from "decky-frontend-lib";
-import { VFC, useEffect, useRef, useState } from "react";
+import { ConfirmModal, DialogBody, DialogButton, DialogControlsSection, Field, Focusable, Navigation, PanelSection, SidebarNavigation, TextField, ToggleField, showModal } from "@decky/ui";
+import { call } from "@decky/api";
+import { FC, useEffect, useRef, useState } from "react";
 import { HiOutlineQrCode } from "react-icons/hi2";
 import { SiDiscord, SiGithub } from "react-icons/si";
 import { showQrModal } from "./MainMenu";
-import Logger, { log } from "./Utils/logger";
+import Logger from "./Utils/logger";
 import { LogViewer } from "./LogViewer";
 import { ScrollableWindowRelative } from './ScrollableWindow';
 import { Developer } from "./Developer";
-import { addAchievement, checkAchievements, hasAchievement, hasAchievements } from "./Utils/achievements";
+import { addAchievement, hasAchievement, hasAchievements } from "./Utils/achievements";
 import { Achievements } from "./Achievements";
 import { FaInfo, FaQ, FaQuestion } from "react-icons/fa6";
 import { StorageTab } from "./StorageTab";
 
 declare const __PLUGIN_VERSION__: string;
 
-export const About: VFC<{ serverAPI: ServerAPI; }> = ({ serverAPI }) => {
+export const About: FC = () => {
     const [url, setUrl] = useState("");
     const [backup, setBackup] = useState("false");
     const [reloading, setReloading] = useState(false);
@@ -43,11 +44,8 @@ export const About: VFC<{ serverAPI: ServerAPI; }> = ({ serverAPI }) => {
     const download = async () => {
         console.log("Download: ", url);
         setIsDownloading(true);
-        await serverAPI.callPluginMethod("download_custom_backend", {
-            url: url,
-            backup: backup
-        });
-        await serverAPI.callPluginMethod("reload", {})
+        await call<[url: string, backup: string], void>("download_custom_backend", url, backup);
+        await call<[], void>("reload");
         setIsDownloading(false);
         addAchievement('MTAw')
     };
@@ -100,8 +98,8 @@ export const About: VFC<{ serverAPI: ServerAPI; }> = ({ serverAPI }) => {
                 resolve(existing);
                 return;
             }
-            serverAPI.callPluginMethod<{}, Number>("get_websocket_port", {}).then((port) => {
-                const address = "ws://localhost:" + port.result + "/ws";
+            call<[], number>("get_websocket_port").then((port) => {
+                const address = "ws://localhost:" + port + "/ws";
                 logger.debug("Connecting to WebSocket: " + address);
                 const ws = new WebSocket(address);
                 socket.current = ws;
@@ -203,7 +201,7 @@ export const About: VFC<{ serverAPI: ServerAPI; }> = ({ serverAPI }) => {
                     },
                     {
                         title: "Storage",
-                        content: <StorageTab serverAPI={serverAPI} />
+                        content: <StorageTab />
                     },
                     {
                         title: "Updates",
@@ -222,19 +220,14 @@ export const About: VFC<{ serverAPI: ServerAPI; }> = ({ serverAPI }) => {
                                                 setUpdateChecking(true);
                                                 setUpdateInfo(null);
                                                 try {
-                                                    const result = await serverAPI.callPluginMethod<{}, any>("check_for_update", {});
-                                                    logger.debug("check_for_update result: " + JSON.stringify(result));
-                                                    if (result.success) {
-                                                        const data = result.result;
-                                                        if (data?.Type === "UpdateCheck") {
-                                                            setUpdateInfo(data.Content);
-                                                        } else if (data?.Type === "Error") {
-                                                            setUpdateInfo({ error: data.Content?.Message || "Unknown backend error" });
-                                                        } else {
-                                                            setUpdateInfo({ error: "Unexpected response: " + JSON.stringify(data) });
-                                                        }
+                                                    const data = await call<[], any>("check_for_update");
+                                                    logger.debug("check_for_update result: " + JSON.stringify(data));
+                                                    if (data?.Type === "UpdateCheck") {
+                                                        setUpdateInfo(data.Content);
+                                                    } else if (data?.Type === "Error") {
+                                                        setUpdateInfo({ error: data.Content?.Message || "Unknown backend error" });
                                                     } else {
-                                                        setUpdateInfo({ error: "Plugin call failed: " + String(result.result) });
+                                                        setUpdateInfo({ error: "Unexpected response: " + JSON.stringify(data) });
                                                     }
                                                 } catch (e) {
                                                     setUpdateInfo({ error: String(e) });
@@ -365,7 +358,7 @@ export const About: VFC<{ serverAPI: ServerAPI; }> = ({ serverAPI }) => {
                                     disabled={reloading}
                                     onClick={async () => {
                                         setReloading(true);
-                                        await serverAPI.callPluginMethod("reload", {})
+                                        await call<[], void>("reload");
                                         setReloading(false);
                                     }}>
                                     {reloading == true ? "Reloading Scripts..." : "Reload scripts"}
@@ -527,20 +520,20 @@ export const About: VFC<{ serverAPI: ServerAPI; }> = ({ serverAPI }) => {
 
                     {
                         title: "Logs",
-                        content: <LogViewer serverAPI={serverAPI}></LogViewer>
+                        content: <LogViewer></LogViewer>
                     },
                     {
                         title: "Achievements",
                         visible: hasAchievements(),
                         content:
-                            <Achievements serverAPI={serverAPI} />
+                            <Achievements />
 
                     },
                     {
                         title: "Developer",
                         visible: isDeveloperMode,
                         content: <div>
-                            <Developer serverAPI={serverAPI} />
+                            <Developer />
                         </div>
                     }
                 ]}
