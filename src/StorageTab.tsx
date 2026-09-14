@@ -1,5 +1,6 @@
-import { DialogButton, Focusable, PanelSection, ServerAPI, SteamSpinner } from "decky-frontend-lib";
-import { VFC, useEffect, useState } from "react";
+import { DialogButton, Focusable, PanelSection, SteamSpinner } from "@decky/ui";
+import { call } from "@decky/api";
+import { FC, useEffect, useState } from "react";
 import { ScrollableWindowRelative } from './ScrollableWindow';
 import Logger from "./Utils/logger";
 
@@ -44,7 +45,7 @@ const STORE_COLORS: Record<string, string> = {
     "itch.io": "#ef4444",
 };
 
-const StorageBar: VFC<{ label: string; value: number; max: number; color: string; detail: string }> = ({ label, value, max, color, detail }) => {
+const StorageBar: FC<{ label: string; value: number; max: number; color: string; detail: string }> = ({ label, value, max, color, detail }) => {
     const percent = max > 0 ? Math.min((value / max) * 100, 100) : 0;
     return (
         <div style={{ marginBottom: "8px" }}>
@@ -65,7 +66,7 @@ const StorageBar: VFC<{ label: string; value: number; max: number; color: string
     );
 };
 
-export const StorageTab: VFC<{ serverAPI: ServerAPI }> = ({ serverAPI }) => {
+export const StorageTab: FC = () => {
     const [stats, setStats] = useState<StorageStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -75,9 +76,9 @@ export const StorageTab: VFC<{ serverAPI: ServerAPI }> = ({ serverAPI }) => {
         setLoading(true);
         setError(null);
         try {
-            const res = await serverAPI.callPluginMethod<{}, { Type: string; Content: StorageStats }>("get_storage_stats", {});
-            if (res.success && res.result.Type === "StorageStats") {
-                setStats(res.result.Content);
+            const res = await call<[], { Type: string; Content: StorageStats }>("get_storage_stats");
+            if (res && res.Type === "StorageStats") {
+                setStats(res.Content);
             } else {
                 setError("Failed to load storage stats");
             }

@@ -1,4 +1,4 @@
-import { findClassModule } from 'decky-frontend-lib';
+import { findClassModule } from "@decky/ui";
 
 type SteamSpinnerClasses = Record<
     'BackgroundAnimation'

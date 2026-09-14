@@ -1,13 +1,13 @@
-import { ButtonItem, ConfirmModal, DialogButton, ServerAPI, ToggleField, showModal } from "decky-frontend-lib";
-import { VFC, useState } from "react";
+import { ConfirmModal, DialogButton, ToggleField, showModal } from "@decky/ui";
+import { FC, useState } from "react";
 import { resetAchievements } from "./Utils/achievements";
 
 
-export const Developer: VFC<{ serverAPI: ServerAPI; }> = ({ serverAPI }) => {
+export const Developer: FC = () => {
 
-    const [logging, setLogging] = useState(localStorage.getItem('enableLogger') === 'true');
-    const [firstLaunch, setFirstLaunch] = useState(localStorage.getItem('js_firstlaunch') === 'true');
-    const [doubleStick, setDoubleStick] = useState(localStorage.getItem('js_doubleStick') === 'true');
+    const [logging] = useState(localStorage.getItem('enableLogger') === 'true');
+    const [firstLaunch] = useState(localStorage.getItem('js_firstlaunch') === 'true');
+    const [doubleStick] = useState(localStorage.getItem('js_doubleStick') === 'true');
     const toggleFirstLaunch = async (value: string) => {
         localStorage.setItem('js_firstlaunch', value);
     }

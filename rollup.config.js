@@ -1,41 +1,17 @@
-import commonjs from "@rollup/plugin-commonjs";
-import json from "@rollup/plugin-json";
-import { nodeResolve } from "@rollup/plugin-node-resolve";
+import deckyPlugin from "@decky/rollup";
 import replace from "@rollup/plugin-replace";
-import typescript from "@rollup/plugin-typescript";
-import { defineConfig } from "rollup";
-import importAssets from "rollup-plugin-import-assets";
+import { readFileSync } from "fs";
 
-import { name } from "./plugin.json";
-import { version } from "./package.json";
+const { version } = JSON.parse(readFileSync("./package.json", "utf-8"));
 
-export default defineConfig({
-  input: "./src/index.tsx",
+// @decky/rollup's deckyPlugin() merges (concats) our plugins with its defaults.
+// The default config only replaces process.env.NODE_ENV, so re-add the
+// __PLUGIN_VERSION__ substitution the old build performed (used in About.tsx).
+export default deckyPlugin({
   plugins: [
-    commonjs(),
-    nodeResolve(),
-    typescript(),
-    json(),
     replace({
-      preventAssignment: false,
-      "process.env.NODE_ENV": JSON.stringify("production"),
-      "__PLUGIN_VERSION__": JSON.stringify(version),
-    }),
-    importAssets({
-      publicPath: `http://127.0.0.1:1337/plugins/${name}/`,
+      preventAssignment: true,
+      __PLUGIN_VERSION__: JSON.stringify(version),
     }),
   ],
-  context: "window",
-  external: ["react", "react-dom","decky-frontend-lib"],
-  output: {
-    file: "dist/index.js",
-    globals: {
-      react: "SP_REACT",
-      "react-dom": "SP_REACTDOM",
-      "decky-frontend-lib": "DFL"
-    },
-    format: "iife",
-   // name: "GameVaultPlugin",
-    exports: "default",
-  },
 });

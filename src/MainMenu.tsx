@@ -1,5 +1,5 @@
-import { ButtonItem, ModalRoot, Navigation, PanelSection, PanelSectionRow, ServerAPI, showModal } from "decky-frontend-lib";
-import { VFC, useEffect } from "react";
+import { ButtonItem, ModalRoot, Navigation, PanelSection, PanelSectionRow, showModal } from "@decky/ui";
+import { FC, useEffect } from "react";
 import { StoreContent } from "./Types/Types";
 import QRCode from "react-qr-code";
 import { DownloadBadge } from "./Components/DownloadBadge";
@@ -26,10 +26,8 @@ export const showQrModal = (url: string) => {
     );
 };
 
-export const MainMenu: VFC<{ serverApi: ServerAPI; content: StoreContent; initActionSet: string; initAction: string; closeModal?: ()=>any }> = ({
-    serverApi,
+export const MainMenu: FC<{ content: StoreContent; initActionSet: string; initAction: string; closeModal?: ()=>any }> = ({
     content,
-    initAction,
     initActionSet,
 closeModal}) => {
 

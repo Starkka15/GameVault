@@ -1,9 +1,9 @@
-import { VFC, useEffect, useState } from "react";
+import { FC, useEffect, useState } from "react";
 import { executeAction } from "./Utils/executeAction";
 import { getAppDetails } from './Utils/utils';
 import { ActionSet, ExecuteGetExeActionSetArgs, ExecuteGetFilesDataArgs, ExecuteRunBinaryArgs, FilesData, SaveRefresh } from "./Types/Types";
-import { DialogButton, ModalRoot, PanelSection, ScrollPanelGroup, SteamSpinner } from "decky-frontend-lib";
-import Logger, { log } from "./Utils/logger";
+import { DialogButton, ModalRoot, PanelSection, ScrollPanelGroup, SteamSpinner } from "@decky/ui";
+import Logger from "./Utils/logger";
 import { gameIDFromAppID } from "./Utils/utils";
 import { EditorProperties } from './Types/EditorProperties';
 
@@ -14,8 +14,8 @@ export interface ExeRunnerProperties extends EditorProperties {
     closeParent?: () => void;
 }
 
-export const ExeRunner: VFC<ExeRunnerProperties> = ({
-    serverAPI, initActionSet, initAction, contentId, closeModal, shortName, refreshParent, onExeExit, closeParent
+export const ExeRunner: FC<ExeRunnerProperties> = ({
+    initActionSet, initAction, contentId, closeModal, shortName, refreshParent, onExeExit, closeParent
 }) => {
     const logger = new Logger("ExeRunner");
     const [actionSetName, setActionSetName] = useState("" as string);
@@ -38,8 +38,7 @@ export const ExeRunner: VFC<ExeRunnerProperties> = ({
         logger.debug("initAction: ", initAction);
         logger.debug("contentId: ", contentId);
         const gameId = gameIDFromAppID(parseInt(contentId));
-        const actionSetResult = await executeAction<ExecuteGetExeActionSetArgs, ActionSet>(
-            serverAPI, initActionSet,
+        const actionSetResult = await executeAction<ExecuteGetExeActionSetArgs, ActionSet>(initActionSet,
             initAction,
 
             {
@@ -63,7 +62,7 @@ export const ExeRunner: VFC<ExeRunnerProperties> = ({
         }
         else {
 
-            const filesDataResult = await executeAction<ExecuteGetFilesDataArgs, FilesData>(serverAPI, setName,
+            const filesDataResult = await executeAction<ExecuteGetFilesDataArgs, FilesData>(setName,
                 "GetContent",
                 {
 
@@ -120,9 +119,7 @@ export const ExeRunner: VFC<ExeRunnerProperties> = ({
                         const gameExe = file.Path.startsWith(startDir) ? file.Path.substring(startDir.length + 1) : file.Path;
                         const gameId = gameIDFromAppID(parseInt(contentId));
                         closeParent && closeParent();
-                        const result = await executeAction<ExecuteRunBinaryArgs, SaveRefresh>(
-                            serverAPI,
-                            actionSetName,
+                        const result = await executeAction<ExecuteRunBinaryArgs, SaveRefresh>(actionSetName,
                             "RunBinary",
                             {
                                 gameId: String(gameId),
@@ -164,7 +161,8 @@ export const ExeRunner: VFC<ExeRunnerProperties> = ({
                     };
                     return (
                         <ScrollPanelGroup
-                            focusable={false} style={{ margin: "0px" }}>
+                            // @ts-ignore ScrollPanelGroup forwards style at runtime
+                            style={{ margin: "0px" }}>
                             <PanelSection>
                                 <DialogButton
                                     onOKButton={runExe}

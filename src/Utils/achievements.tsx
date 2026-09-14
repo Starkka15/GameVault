@@ -3,7 +3,7 @@ import Logger from "./logger";
 import { SiBrave, SiCodingninjas } from "react-icons/si";
 import { FaCat, FaEgg, FaRebel, FaStar, FaUserSecret } from "react-icons/fa6";
 import { FaSkullCrossbones } from "react-icons/fa";
-import { Toaster } from "decky-frontend-lib";
+import { Toaster } from "@decky/api";
 
 
 type Achievement = string; // Each achievement is represented by a base64 string

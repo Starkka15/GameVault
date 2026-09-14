@@ -1,14 +1,13 @@
-import { ServerAPI, useParams } from "decky-frontend-lib";
-import { VFC } from "react";
+import { useParams } from "@decky/ui";
+import { FC } from "react";
 import { GameDetailsItem } from "./GameDetailsItem";
 
 interface GameDetailsPageProperties {
-  serverAPI: ServerAPI;
+  
   clearActiveGame: () => void;
 }
 
-export const GameDetailsPage: VFC<GameDetailsPageProperties> = ({
-  serverAPI,
+export const GameDetailsPage: FC<GameDetailsPageProperties> = ({
   clearActiveGame
 }) => {
 
@@ -18,7 +17,7 @@ export const GameDetailsPage: VFC<GameDetailsPageProperties> = ({
     shortname: string
   }>();
   return (
-    <GameDetailsItem serverAPI={serverAPI} shortname={shortname} initActionSet={initActionSet} initAction={initAction} clearActiveGame={clearActiveGame} />
+    <GameDetailsItem shortname={shortname} initActionSet={initActionSet} initAction={initAction} clearActiveGame={clearActiveGame} />
   )
 }
 

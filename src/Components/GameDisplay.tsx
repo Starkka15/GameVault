@@ -1,22 +1,5 @@
-import {
-    Focusable,
-    DialogButton,
-    Marquee,
-    showContextMenu,
-    Menu,
-    MenuItem,
-    showModal,
-    ServerAPI,
-    ProgressBar,
-    FocusableProps,
-    afterPatch,
-    Button,
-    joinClassNames,
-    ConfirmModal,
-    Navigation,
-    FooterLegendProps,
-} from "decky-frontend-lib";
-import { FC, VFC, useEffect, useRef, useState } from "react";
+import { Focusable, DialogButton, Marquee, showContextMenu, Menu, MenuItem, showModal, ProgressBar, FocusableProps, afterPatch, Button, joinClassNames, ConfirmModal, Navigation, FooterLegendProps } from "@decky/ui";
+import { FC, useEffect, useRef, useState } from "react";
 import { FaCog, FaSlidersH } from "react-icons/fa";
 import { EditorAction, ExecuteGetGameDetailsArgs, ExecuteGetGameSizeArgs, GameSize, MenuAction, ProgressUpdate } from "../Types/Types";
 import { ConfEditor } from "../ConfEditor";
@@ -32,7 +15,6 @@ import { QueueItem, installQueue } from '../Utils/installQueue';
 
 
 interface GameDisplayProperties {
-    serverApi: ServerAPI;
     name: string;
     shortName: string;
     closeModal?: any;
@@ -57,9 +39,8 @@ interface GameDisplayProperties {
 }
 
 
-const GameDisplay: VFC<GameDisplayProperties> = (
+const GameDisplay: FC<GameDisplayProperties> = (
     {
-        serverApi,
         closeModal,
         name,
         shortName,
@@ -95,9 +76,9 @@ const GameDisplay: VFC<GameDisplayProperties> = (
                     return <MenuItem onSelected={
                         () => {
                             if (editor.Type == "IniEditor")
-                                showModal(<ConfEditor serverAPI={serverApi} initActionSet={initActionSet} initAction={editor.InitActionId} contentId={editor.ContentId} refreshParent={reloadData} />);
+                                showModal(<ConfEditor initActionSet={initActionSet} initAction={editor.InitActionId} contentId={editor.ContentId} refreshParent={reloadData} />);
                             if (editor.Type == "FileEditor")
-                                showModal(<BatEditor serverAPI={serverApi} initActionSet={initActionSet} initAction={editor.InitActionId} contentId={editor.ContentId} refreshParent={reloadData} />);
+                                showModal(<BatEditor initActionSet={initActionSet} initAction={editor.InitActionId} contentId={editor.ContentId} refreshParent={reloadData} />);
                         }
                     }>{editor.Title}</MenuItem>;
                 })}
@@ -111,7 +92,7 @@ const GameDisplay: VFC<GameDisplayProperties> = (
         showContextMenu(
             <Menu label="Actions" cancelText="Cancel" onCancel={() => { }}>
                 {isInstalled &&
-                    <MenuItem onSelected={() => showModal(<ExeRunner serverAPI={serverApi} initActionSet={initActionSet} initAction="GetExeActions" contentId={steamClientID} shortName={shortName} refreshParent={reloadData} onExeExit={onExeExit} closeParent={closeModal} />)}>
+                    <MenuItem onSelected={() => showModal(<ExeRunner initActionSet={initActionSet} initAction="GetExeActions" contentId={steamClientID} shortName={shortName} refreshParent={reloadData} onExeExit={onExeExit} closeParent={closeModal} />)}>
                         Run exe in Game folder
                     </MenuItem>
                 }
@@ -125,7 +106,7 @@ const GameDisplay: VFC<GameDisplayProperties> = (
                     Uninstall Game
                 </MenuItem>
                 {isInstalled && initActionSet === 'GOGActions' &&
-                    <MenuItem onSelected={() => showModal(<DlcManager serverAPI={serverApi} initActionSet={initActionSet} shortName={shortName} name={name} refreshParent={reloadData} />)}>
+                    <MenuItem onSelected={() => showModal(<DlcManager initActionSet={initActionSet} shortName={shortName} name={name} refreshParent={reloadData} />)}>
                         Install/Remove DLCs
                     </MenuItem>
                 }
@@ -186,7 +167,7 @@ const GameDisplay: VFC<GameDisplayProperties> = (
         setGameSize('');
         setHasUpdate(false);
         (async () => {
-            const gameSizeResult = await executeAction<ExecuteGetGameSizeArgs, GameSize>(serverApi, initActionSet, 'GetGameSize', { shortname: shortName, installed: String(isInstalled) });
+            const gameSizeResult = await executeAction<ExecuteGetGameSizeArgs, GameSize>(initActionSet, 'GetGameSize', { shortname: shortName, installed: String(isInstalled) });
             if (!gameSizeResult) return;
             setGameSize(gameSizeResult.Content.Size);
         })();
@@ -197,7 +178,7 @@ const GameDisplay: VFC<GameDisplayProperties> = (
         if (isInstalled && UPDATE_CAPABLE_SETS.includes(initActionSet)) {
             (async () => {
                 try {
-                    const updateResult = await executeAction<ExecuteGetGameDetailsArgs, boolean>(serverApi, initActionSet, 'CheckUpdate', { shortname: shortName });
+                    const updateResult = await executeAction<ExecuteGetGameDetailsArgs, boolean>(initActionSet, 'CheckUpdate', { shortname: shortName });
                     if (updateResult && updateResult.Content === true) {
                         setHasUpdate(true);
                     }
@@ -349,7 +330,7 @@ interface ImageMarqueeProps {
     height: string;
 }
 
-const ImageMarquee: VFC<ImageMarqueeProps> = ({ sources, height }) => {
+const ImageMarquee: FC<ImageMarqueeProps> = ({ sources, height }) => {
     const [key, setKey] = useState(0); //used to force marquee to remount so it works properly
     const ref = useRef<HTMLDivElement>(null);
 
@@ -379,7 +360,7 @@ interface MarqueeImageProps {
     onLoad: () => void;
 }
 
-const MarqueeImage: VFC<MarqueeImageProps> = ({ src, onLoad }) => {
+const MarqueeImage: FC<MarqueeImageProps> = ({ src, onLoad }) => {
     const [isImgLoaded, setIsImgLoaded] = useState(false);
     const [error, setError] = useState(false);
 

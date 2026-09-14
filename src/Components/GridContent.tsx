@@ -1,6 +1,6 @@
-import { DialogButton, Focusable, Menu, MenuItem, Navigation, ProgressBar, ServerAPI, Spinner, TextField, gamepadTabbedPageClasses, showContextMenu, showModal } from "decky-frontend-lib";
+import { DialogButton, Focusable, Menu, MenuItem, Navigation, ProgressBar, Spinner, TextField, gamepadTabbedPageClasses, showContextMenu, showModal } from "@decky/ui";
 import { ContentResult, ContentType, ExecuteArgs, ExecuteGetGameDetailsArgs, GameData, GameDataList, GameImages, MenuAction, ScriptActions } from "../Types/Types";
-import { Dispatch, SetStateAction, VFC, memo, useEffect, useRef, useState } from "react";
+import { Dispatch, SetStateAction, FC, memo, useEffect, useRef, useState } from "react";
 import GameGridItem from './GameGridItem';
 import { GameDetailsItem } from './GameDetailsItem';
 import Logger from "../Utils/logger";
@@ -10,6 +10,7 @@ import { executeAction } from '../Utils/executeAction';
 import { ConfEditor } from '../ConfEditor';
 import { FaStore } from "react-icons/fa6";
 import { installQueue, QueueState } from '../Utils/installQueue';
+import { toaster } from "@decky/api";
 
 export const contentTabsContainerClass = 'content-tabs-container';
 export const gridContentContainerClass = 'grid-content-container';
@@ -27,14 +28,14 @@ interface GridContentCache {
 
 interface GridContentProps {
     content: GameDataList;
-    serverAPI: ServerAPI;
+    
     initActionSet: string;
     refreshContent: (actionArgs: GridContentArgs, onFinish?: () => void) => void;
     argsCache: GridContentCache;
     setArgsCache: Dispatch<SetStateAction<GridContentCache>>;
 }
 
-export const GridContent: VFC<GridContentProps> = ({ content, serverAPI, initActionSet, refreshContent, argsCache, setArgsCache }) => {
+export const GridContent: FC<GridContentProps> = ({ content, initActionSet, refreshContent, argsCache, setArgsCache }) => {
     const logger = new Logger('ContentGrid');
     const [isLimited, setIsLimited] = useState(true);
     const [isLimitedLoading, setIsLimitedLoading] = useState(false);
@@ -48,13 +49,12 @@ export const GridContent: VFC<GridContentProps> = ({ content, serverAPI, initAct
     const [artworkBusy, setArtworkBusy] = useState(false);
 
     useEffect(() => {
-        installQueue.setServerAPI(serverAPI);
         const unsub = installQueue.subscribe(setQueueState);
         return () => {
             unsub();
             if (debounceRef.current) clearTimeout(debounceRef.current);
         };
-    }, [serverAPI]);
+    }, []);
 
     const toggleSelection = (game: GameData) => {
         // Only allow selecting uninstalled games
@@ -78,7 +78,7 @@ export const GridContent: VFC<GridContentProps> = ({ content, serverAPI, initAct
     useEffect(() => {
         (async () => {
             try {
-                const actionRes = await executeAction<ExecuteArgs, ScriptActions>(serverAPI, initActionSet, "GetScriptActions", {});
+                const actionRes = await executeAction<ExecuteArgs, ScriptActions>(initActionSet, "GetScriptActions", {});
                 logger.debug('Get sscript actions result', actionRes);
                 if (!actionRes) {
                     return;
@@ -99,18 +99,17 @@ export const GridContent: VFC<GridContentProps> = ({ content, serverAPI, initAct
         if (artworkBusy) return;
         const games = (content.Games ?? []).filter(g => g.SteamClientID);
         if (games.length === 0) {
-            serverAPI.toaster.toast({ title: "GameVault", body: "No added games in view to fetch artwork for." });
+            toaster.toast({ title: "GameVault", body: "No added games in view to fetch artwork for." });
             return;
         }
         setArtworkBusy(true);
-        serverAPI.toaster.toast({ title: "GameVault", body: `Fetching artwork for ${games.length} game(s)…` });
+        toaster.toast({ title: "GameVault", body: `Fetching artwork for ${games.length} game(s)ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦` });
         let applied = 0;
         for (const g of games) {
             const id = parseInt(g.SteamClientID, 10);
             if (Number.isNaN(id)) continue;
             try {
-                const imageResult = await executeAction<ExecuteGetGameDetailsArgs, GameImages>(
-                    serverAPI, initActionSet, "GetJsonImages", { shortname: g.ShortName });
+                const imageResult = await executeAction<ExecuteGetGameDetailsArgs, GameImages>(initActionSet, "GetJsonImages", { shortname: g.ShortName });
                 const images = imageResult?.Content;
                 if (!images) continue;
                 let any = false;
@@ -124,14 +123,14 @@ export const GridContent: VFC<GridContentProps> = ({ content, serverAPI, initAct
             }
         }
         setArtworkBusy(false);
-        serverAPI.toaster.toast({ title: "GameVault", body: `Artwork applied to ${applied}/${games.length} game(s).` });
+        toaster.toast({ title: "GameVault", body: `Artwork applied to ${applied}/${games.length} game(s).` });
     };
 
     const actionsMenu = (e: any) => {
         showContextMenu(
             <Menu label="Actions" cancelText="Cancel" onCancel={() => { }}>
                 <MenuItem disabled={artworkBusy} onSelected={fetchAllArtwork}>
-                    {artworkBusy ? "Fetching Artwork…" : "Fetch Artwork (SteamGridDB)"}
+                    {artworkBusy ? "Fetching ArtworkÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦" : "Fetch Artwork (SteamGridDB)"}
                 </MenuItem>
                 {scriptActions?.map((action) =>
                     <MenuItem
@@ -145,7 +144,7 @@ export const GridContent: VFC<GridContentProps> = ({ content, serverAPI, initAct
                                 gameId: "",
                                 appId: ""
                             };
-                            const result = await executeAction<ExecuteArgs, ContentResult<ContentType>>(serverAPI, initActionSet, action.ActionId, args);
+                            const result = await executeAction<ExecuteArgs, ContentResult<ContentType>>(initActionSet, action.ActionId, args);
                             if (result?.Type == "RefreshContent") {
                                 refreshContent({ ...argsCache, limited: isLimited });
                             }
@@ -209,6 +208,7 @@ export const GridContent: VFC<GridContentProps> = ({ content, serverAPI, initAct
             <Focusable style={{ display: "flex", gap: '15px' }}>
                 <div style={{ width: '100%' }}>
                     <TextField
+                        // @ts-ignore TextField forwards placeholder to the input at runtime
                         placeholder="Search"
                         value={filter}
                         onChange={(e) => {
@@ -229,7 +229,6 @@ export const GridContent: VFC<GridContentProps> = ({ content, serverAPI, initAct
                 <DialogButton
                     onClick={() => showModal(
                         <ConfEditor
-                            serverAPI={serverAPI}
                             initActionSet={initActionSet}
                             initAction="GetTabConfigActions"
                             contentId="0"
@@ -290,7 +289,7 @@ export const GridContent: VFC<GridContentProps> = ({ content, serverAPI, initAct
                     >
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                             <span style={{ fontSize: '12px', color: '#b0b0b0' }}>
-                                {current.title} — {current.description}
+                                {current.title} ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â {current.description}
                             </span>
                             {queuedCount > 0 && (
                                 <span style={{ fontSize: '11px', color: '#1a9fff' }}>
@@ -304,7 +303,7 @@ export const GridContent: VFC<GridContentProps> = ({ content, serverAPI, initAct
             })()}
             {content.NeedsLogin === "true" && (
                 <div style={{ paddingTop: '15px' }}>
-                    <LoginContent serverAPI={serverAPI} initActionSet={initActionSet} initAction="GetLoginActions" />
+                    <LoginContent initActionSet={initActionSet} initAction="GetLoginActions" />
                 </div>
             )}
             {argsCache.installed && (
@@ -332,7 +331,6 @@ export const GridContent: VFC<GridContentProps> = ({ content, serverAPI, initAct
                 </div>   
             )}
             <GridItems
-                serverAPI={serverAPI}
                 games={content.Games ?? []}
                 initActionSet={initActionSet}
                 initAction=""
@@ -346,7 +344,7 @@ export const GridContent: VFC<GridContentProps> = ({ content, serverAPI, initAct
 
 interface GridItemsProperties {
     games: GameData[];
-    serverAPI: ServerAPI;
+    
     initActionSet: string;
     initAction: string;
     selectMode?: boolean;
@@ -354,7 +352,7 @@ interface GridItemsProperties {
     onToggleSelect?: (game: GameData) => void;
 }
 
-const GridItems: VFC<GridItemsProperties> = memo(({ serverAPI, games, initActionSet, initAction, selectMode, selectedGames, onToggleSelect }) => {
+const GridItems: FC<GridItemsProperties> = memo(({ games, initActionSet, initAction, selectMode, selectedGames, onToggleSelect }) => {
     const logger = new Logger("GridContainer");
 
     const imgAreaWidth = '120px';
@@ -387,7 +385,6 @@ const GridItems: VFC<GridItemsProperties> = memo(({ serverAPI, games, initAction
                                 logger.debug("onClick game: ", game);
                                 showModal(
                                     <GameDetailsItem
-                                        serverAPI={serverAPI}
                                         shortname={game.ShortName}
                                         initActionSet={initActionSet}
                                         initAction={initAction}

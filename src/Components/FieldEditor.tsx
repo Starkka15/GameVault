@@ -1,17 +1,5 @@
-import {
-    SliderField,
-    TextField,
-    ToggleField,
-    Dropdown,
-    Field,
-    showContextMenu,
-    Menu,
-    MenuItem,
-    Focusable,
-    PanelSectionRow,
-    DialogButton,
-} from "decky-frontend-lib";
-import { VFC, useEffect, useState } from "react";
+import { SliderField, TextField, ToggleField, Dropdown, Field, showContextMenu, Menu, MenuItem, Focusable, PanelSectionRow, DialogButton } from "@decky/ui";
+import { FC, useEffect, useState } from "react";
 import { ValueType } from "../Types/Types";
 import { KeyValuePair } from "../Types/Types";
 import { FaCog } from "react-icons/fa";
@@ -26,7 +14,7 @@ interface FieldProps {
     fieldType: ValueType;
 };
 
-const FieldItem: VFC<FieldProps> = ({ field, value, onChange, fieldType }) => {
+const FieldItem: FC<FieldProps> = ({ field, value, onChange, fieldType }) => {
     const label = field.Label ?? formatLabel(field.Key);
     const [parentValue, setParentValue] = useState("");
     useEffect(() => {
@@ -107,7 +95,7 @@ interface FieldEditorProps {
     updateHelpText: (field: KeyValuePair) => void;
 }
 
-export const FieldEditor: VFC<FieldEditorProps> = ({ field, onChange, updateHelpText }) => {
+export const FieldEditor: FC<FieldEditorProps> = ({ field, onChange, updateHelpText }) => {
     const [value, setValue] = useState(field.Value);
     const [fieldType, setFieldType] = useState(field.Type);
 

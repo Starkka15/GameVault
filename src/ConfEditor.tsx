@@ -1,10 +1,5 @@
-import {
-    Focusable,
-    PanelSection, Dropdown, ModalRoot, ModalRootProps,
-    quickAccessControlsClasses,
-    gamepadDialogClasses
-} from "decky-frontend-lib";
-import { VFC, useEffect, useState, useRef } from "react";
+import { Focusable, PanelSection, Dropdown, ModalRoot, ModalRootProps, quickAccessControlsClasses, gamepadDialogClasses } from "@decky/ui";
+import { FC, useEffect, useState, useRef } from "react";
 import { ValueType, Section, ConfData, KeyValuePair, ActionSet, ContentError, SaveRefresh, ExecuteGetActionSetArgs } from "./Types/Types";
 import { SectionEditor, sectionEditorFieldRoot } from "./Components/SectionEditor";
 import Logger from "./Utils/logger";
@@ -19,8 +14,8 @@ export interface ErrorModalProps extends ModalRootProps {
 
 }
 
-export const ConfEditor: VFC<EditorProperties> = ({
-    serverAPI, initActionSet, initAction, contentId, closeModal, refreshParent
+export const ConfEditor: FC<EditorProperties> = ({
+    initActionSet, initAction, contentId, closeModal, refreshParent
 }) => {
     const logger = new Logger("ConfEditor");
     logger.log(`initActionSet: ${initActionSet}, initAction: ${initAction}, contentId: ${contentId}`);
@@ -46,9 +41,7 @@ export const ConfEditor: VFC<EditorProperties> = ({
 
     }, []);
     const OnInit = async () => {
-        const actionSetResult = await executeAction<ExecuteGetActionSetArgs, ActionSet>(
-            serverAPI,
-            initActionSet,
+        const actionSetResult = await executeAction<ExecuteGetActionSetArgs, ActionSet>(initActionSet,
             initAction,
             {
                 content_id: contentId
@@ -65,7 +58,6 @@ export const ConfEditor: VFC<EditorProperties> = ({
         logger.log("SetName: ", setName);
 
         const configDataResult = await executeAction<ExecuteGetActionSetArgs, ConfData>( //supposedly here we know that this action will return this type of Content
-            serverAPI,
             setName,
             "GetContent",
             {
@@ -110,8 +102,7 @@ export const ConfEditor: VFC<EditorProperties> = ({
                         onSecondaryActionDescription="Save config"
                         onSecondaryButton={async () => {
                             logger.log("Saving config: ", confData);
-                            const result = await executeAction(serverAPI,
-                                actionSetName,
+                            const result = await executeAction(actionSetName,
                                 "SaveContent",
                                 {
                                     content_id: contentId,
@@ -168,7 +159,6 @@ export const ConfEditor: VFC<EditorProperties> = ({
                                     onSecondaryButton={async () => {
                                         logger.log("Saving config: ", confData);
                                         const result = await executeAction<ExecuteGetActionSetArgs, SaveRefresh /*| SomeOtherContentPossibility */>( //pass multiple possible Content types with a union
-                                            serverAPI,
                                             actionSetName,
                                             "SaveContent",
                                             {

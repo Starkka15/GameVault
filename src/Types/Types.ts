@@ -196,6 +196,10 @@ export interface Panel {
 
 export interface ExecuteArgs {
   inputData?: string|FileData[]|ConfData;
+  appId?: string;
+  // Actions pass a variety of extra command arguments (shortname, content_id,
+  // dlcId, steamClientID, ...) that are spread into the backend call.
+  [key: string]: any;
 }
 export interface GetSettingArgs extends ExecuteArgs {
   name: string;

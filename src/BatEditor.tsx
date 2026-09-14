@@ -1,8 +1,5 @@
-import {
-    Focusable,
-    PanelSection, Dropdown, ModalRoot, ScrollPanelGroup
-} from "decky-frontend-lib";
-import { VFC, useEffect, useState, useRef } from "react";
+import { Focusable, PanelSection, Dropdown, ModalRoot, ScrollPanelGroup } from "@decky/ui";
+import { FC, useEffect, useState, useRef } from "react";
 import { ActionSet, ExecuteGetActionSetArgs, FileData, FilesData, SaveRefresh } from "./Types/Types";
 // import { Panel, ScrollPanelGroup } from "./Components/Scrollable";
 import { EditorProperties } from "./Types/EditorProperties";
@@ -10,8 +7,7 @@ import { executeAction } from "./Utils/executeAction";
 
 const batEditorRootClass = 'bat-editor-modal-root';
 
-export const BatEditor: VFC<EditorProperties> = ({
-    serverAPI,
+export const BatEditor: FC<EditorProperties> = ({
     initActionSet,
     initAction,
     contentId,
@@ -24,13 +20,13 @@ export const BatEditor: VFC<EditorProperties> = ({
     const focusRef = useRef<HTMLTextAreaElement>(null);
     const [actionSetName, setActionSetName] = useState("" as string);
     const OnInit = async () => {
-        const actionSetResult = await executeAction<ExecuteGetActionSetArgs, ActionSet>(serverAPI, initActionSet, initAction, { content_id: contentId });
+        const actionSetResult = await executeAction<ExecuteGetActionSetArgs, ActionSet>(initActionSet, initAction, { content_id: contentId });
         if (actionSetResult === null) {
             return;
         }
         const setName = actionSetResult.Content.SetName;
         
-        const fileDataResult = await executeAction<ExecuteGetActionSetArgs, FilesData>(serverAPI, setName, "GetContent", { content_id: contentId });
+        const fileDataResult = await executeAction<ExecuteGetActionSetArgs, FilesData>(setName, "GetContent", { content_id: contentId });
         if (fileDataResult === null) {
             return;
         }
@@ -63,8 +59,7 @@ export const BatEditor: VFC<EditorProperties> = ({
                 closeModal={closeModal}
             >
                 <ScrollPanelGroup
-                  
-                    focusable={false}
+                    // @ts-ignore ScrollPanelGroup forwards style at runtime
                     style={{ margin: "0px" }}>
                     <Focusable
                         style={{ background: "inherit" }}>
@@ -74,7 +69,6 @@ export const BatEditor: VFC<EditorProperties> = ({
                             onSecondaryActionDescription="Save bat files"
                             onSecondaryButton={async () => {
                                 const result = await executeAction<ExecuteGetActionSetArgs, SaveRefresh>( //* will SaveContent always return this type? if so remove the check below, if not put all the possibities here
-                                    serverAPI,
                                     actionSetName,
                                     "SaveContent",
                                     {
@@ -122,6 +116,7 @@ export const BatEditor: VFC<EditorProperties> = ({
                                                 }} />
                                         </Focusable>
                                         <Focusable
+                                            // @ts-ignore focusableIfNoChildren is honoured at runtime
                                             focusableIfNoChildren={true}
                                             noFocusRing={true}
                                             onFocusCapture={() => (focusRef && focusRef.current != null) && focusRef.current.focus()

@@ -1,4 +1,4 @@
-import { AppDetails } from 'decky-frontend-lib';
+import { AppDetails } from "@decky/ui";
 
 type AppDetailsStore = {
     GetAppDetails: (appId: number) => AppDetails | undefined;
