@@ -46,6 +46,33 @@ def get_compat_dir():
     return candidates[0]
 
 
+def _select_arch_asset(assets):
+    """Pick the GE-Proton .tar.gz matching this machine's architecture.
+
+    GloriousEggroll ships both x86_64 and aarch64 tarballs. Releases up to
+    GE-Proton11-3 name the x86_64 build plainly (GE-Proton11-3.tar.gz); newer
+    ones suffix it (GE-Proton11-6-x86_64.tar.gz). The aarch64 build sorts first
+    in the asset list, so taking the first .tar.gz installs the ARM build on an
+    x86_64 Deck/Ally. Never cross-install: on x86_64 hosts we refuse aarch64.
+    """
+    import platform
+
+    machine = platform.machine().lower()
+    is_arm = machine in ("aarch64", "arm64")
+    tarballs = [a for a in assets if a.get("name", "").endswith(".tar.gz")]
+
+    def has(asset, *toks):
+        name = asset.get("name", "").lower()
+        return any(t in name for t in toks)
+
+    if is_arm:
+        return next((a for a in tarballs if has(a, "aarch64", "arm64")), None)
+    # explicit x86_64 asset (new naming), else a plain asset with no arch suffix
+    # (old naming); never fall through to the aarch64 build.
+    return (next((a for a in tarballs if has(a, "x86_64", "amd64")), None)
+            or next((a for a in tarballs if not has(a, "aarch64", "arm64")), None))
+
+
 def install_ge_proton():
     """Download and install the latest GE-Proton release."""
     print("Fetching latest GE-Proton release info...")
@@ -61,14 +88,12 @@ def install_ge_proton():
         return
 
     tag = release.get("tag_name", "unknown")
-    tarball_asset = None
-    for asset in release.get("assets", []):
-        if asset["name"].endswith(".tar.gz"):
-            tarball_asset = asset
-            break
+    tarball_asset = _select_arch_asset(release.get("assets", []))
 
     if not tarball_asset:
-        print("Error: No .tar.gz asset found in latest release.")
+        import platform
+        print(f"Error: No GE-Proton .tar.gz asset for architecture "
+              f"'{platform.machine()}' found in latest release.")
         return
 
     download_url = tarball_asset["browser_download_url"]
