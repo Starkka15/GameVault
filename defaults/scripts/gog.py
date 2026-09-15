@@ -5,6 +5,7 @@ import os
 import glob
 import zipfile
 import sqlite3
+import struct
 import sys
 import subprocess
 import time
@@ -662,6 +663,134 @@ class GOG(GamesDb.GamesDb):
         if not row:
             return None
         return row[0] or row[1] or None
+
+    @staticmethod
+    def _find_shortcuts_vdfs():
+        """Locate every Steam user's shortcuts.vdf (non-Steam shortcuts live here)."""
+        home = os.path.expanduser('~')
+        found = glob.glob(os.path.join(home, '.steam/steam/userdata/*/config/shortcuts.vdf'))
+        found += glob.glob(os.path.join(home, '.local/share/Steam/userdata/*/config/shortcuts.vdf'))
+        # de-dup by real path (the two globs are usually symlinks to the same file)
+        by_real = {}
+        for p in found:
+            try:
+                by_real[os.path.realpath(p)] = p
+            except OSError:
+                by_real[p] = p
+        return list(by_real.keys())
+
+    @staticmethod
+    def _parse_gog_shortcuts(vdf_path):
+        """Return {shortname: unsigned_appid} for GOG-launcher shortcuts in one shortcuts.vdf.
+
+        Steam's binary VDF: 0x00 opens a nested map, 0x08 closes it, 0x01 is a
+        key\\0value\\0 string, 0x02 is a key\\0<int32-LE>. Each shortcut is a numbered
+        submap holding 'appid' (int32) and 'LaunchOptions' (string). A GameVault GOG
+        shortcut's LaunchOptions is '<...>/gog-launcher.sh <shortname>%command%', so the
+        shortname is the token right after gog-launcher.sh. GameVault stores SteamClientID
+        as the unsigned form of the (signed) vdf appid."""
+        result = {}
+        try:
+            data = open(vdf_path, 'rb').read()
+        except OSError:
+            return result
+
+        def read_cstr(buf, pos):
+            end = buf.index(b'\x00', pos)
+            return buf[pos:end].decode('utf-8', 'replace'), end + 1
+
+        entries = []
+        cur = {}
+        depth = 0
+        i = 0
+        try:
+            while i < len(data):
+                t = data[i]
+                i += 1
+                if t == 0x08:  # end of map
+                    depth -= 1
+                    if depth == 1:  # closed one shortcut entry
+                        entries.append(cur)
+                        cur = {}
+                    continue
+                key, i = read_cstr(data, i)
+                if t == 0x00:  # nested map
+                    depth += 1
+                elif t == 0x01:  # string
+                    val, i = read_cstr(data, i)
+                    if key.lower() == 'launchoptions':
+                        cur['launchoptions'] = val
+                elif t == 0x02:  # int32
+                    val = struct.unpack('<i', data[i:i + 4])[0]
+                    i += 4
+                    if key.lower() == 'appid':
+                        cur['appid'] = val
+                else:  # unknown type — stop rather than misread
+                    break
+        except (ValueError, IndexError, struct.error) as e:
+            print(f"[detect_installed] vdf parse stopped early: {e}", file=sys.stderr)
+
+        for e in entries:
+            lo = e.get('launchoptions', '')
+            idx = lo.find('gog-launcher.sh')
+            if idx < 0 or 'appid' not in e:
+                continue
+            rest = lo[idx + len('gog-launcher.sh'):].strip().split()
+            if not rest:
+                continue
+            shortname = rest[0].replace('%command%', '').strip('"')
+            if shortname:
+                result[shortname] = e['appid'] & 0xffffffff
+        return result
+
+    def detect_installed(self):
+        """Self-healing re-link of installed GOG games from their existing Steam shortcuts.
+
+        After a logout (or any DB loss) a game's SteamClientID and install info are gone,
+        but the Steam shortcut and the on-disk files remain. Each GOG shortcut encodes its
+        shortname in its launch options, so we can restore the DB link (and reprocess the
+        on-disk goggame-*.info for exe/paths) without redownloading. Idempotent: games
+        already linked to their current shortcut are skipped."""
+        install_dir = os.environ.get('INSTALL_DIR', os.path.expanduser('~/Games/gog/'))
+
+        shortcut_map = {}
+        for vdf in self._find_shortcuts_vdfs():
+            for shortname, appid in self._parse_gog_shortcuts(vdf).items():
+                shortcut_map.setdefault(shortname, appid)
+
+        # Snapshot which owned games we know about + their current SteamClientID
+        conn = self.get_connection()
+        c = conn.cursor()
+        known = {}
+        for shortname in shortcut_map:
+            c.execute("SELECT SteamClientID FROM Game WHERE ShortName=?", (shortname,))
+            row = c.fetchone()
+            if row is not None:
+                known[shortname] = row[0] or ''
+        conn.close()
+
+        restored = 0
+        for shortname, appid in shortcut_map.items():
+            if shortname not in known:
+                continue  # not an owned/synced game
+            if known[shortname] == str(appid):
+                continue  # already linked to this exact shortcut
+            # Only re-link games whose files are actually on disk
+            matches = glob.glob(os.path.join(install_dir, '**', f'goggame-{shortname}.info'), recursive=True)
+            if not matches:
+                continue
+            rel = os.path.relpath(matches[0], install_dir)
+            try:
+                self.process_info_file(rel)  # restore ApplicationPath/RootFolder/etc.
+            except Exception as e:
+                print(f"[detect_installed] process_info_file failed for {shortname}: {e}", file=sys.stderr)
+            self.add_steam_client_id(shortname, str(appid))
+            restored += 1
+            print(f"[detect_installed] re-linked {shortname} -> {appid}", file=sys.stderr)
+
+        print(f"[detect_installed] re-linked {restored} installed GOG game(s)", file=sys.stderr)
+        return json.dumps({'Type': 'Success', 'Content': {
+            'Message': f'Detected {restored} installed game(s)', 'Toast': restored > 0}})
 
     def get_dlcs(self, game_id):
         """List a game's DLCs (from gogdl info) plus whether each is installed.
