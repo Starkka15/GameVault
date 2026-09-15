@@ -10,10 +10,26 @@ DBFILE="${DECKY_PLUGIN_RUNTIME_DIR}/ea.db"
 
 export MAXIMA_CMD="${HOME}/.local/bin/maxima-cli"
 export MAXIMA_DISABLE_QRC=1
-# NOTE: MAXIMA_SKIP_BOOTSTRAP / MAXIMA_DISABLE_WINE_VERIFICATION are deliberately
-# NOT set here. `maxima-cli launch` needs the bootstrap (umu/GE-Proton runtime)
-# and wine verification to stand up the prefix it runs the game in; setting them
-# would break the launch path. They only ever applied to the install-only flow.
+# maxima-cli's launch-time "wine verification" queries GitHub for the latest
+# GE-Proton release and matches an asset against the regex `GE-Proton\d+-\d+\.tar\.gz`.
+# GloriousEggroll now ships the x86_64 tarball as `GE-Proton<ver>-x86_64.tar.gz`
+# (the `-x86_64` suffix arrived after GE-Proton11-3, alongside the aarch64 builds),
+# so that regex matches nothing on current releases and the check dies with
+# "couldn't find suitable wine release" — aborting the launch even though a valid
+# GE-Proton is already installed and the prefix is fully stood up.
+#
+# So: when a GE-Proton runtime is ALREADY present, skip the (broken, network-
+# dependent) verification and launch with what's installed. A first-time user with
+# no runtime yet still runs verification/bootstrap normally — the pinned GE-Proton
+# in dependency-versions.toml has a plain-named x86_64 asset that still matches, so
+# the initial download is unaffected. Proper fix belongs upstream in maxima-cli:
+# widen the asset regex to accept the `-x86_64` suffix and make the update check
+# non-fatal (fall back to the installed runtime when GitHub can't be resolved).
+_maxima_proton_dir="${XDG_DATA_HOME:-${HOME}/.local/share}/maxima/wine/proton"
+if [[ -f "${_maxima_proton_dir}/version" ]]; then
+    export MAXIMA_DISABLE_WINE_VERIFICATION=1
+fi
+unset _maxima_proton_dir
 # Skip the EA Touchup.exe installer step at end of install: under Proton the
 # DirectX/XAudio/vcredist redists it registers are already provided, we resolve
 # the game exe ourselves (not via its registry key), and some titles' Touchup
