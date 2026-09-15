@@ -173,23 +173,45 @@ def gog_login(auth_tokens_path):
     return True
 
 
-def amazon_login(nile_bin):
-    """Handle Amazon two-step device registration login flow."""
-    # Step 1: Get login data from nile
-    print("Getting Amazon login data...")
+def _nile_login_data(nile_bin):
+    """Ask nile to start a login and return (login_data, result).
+
+    nile prints the login JSON to stdout, but SteamOS mixes in LD_PRELOAD noise,
+    so parse line-by-line rather than json.loads()-ing the whole stream."""
     result = subprocess.run(
         [nile_bin, 'auth', '--login', '--non-interactive'],
         capture_output=True, text=True
     )
+    for output in (result.stdout, result.stderr):
+        for line in (output or '').splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                data = json.loads(line)
+            except (json.JSONDecodeError, ValueError):
+                continue
+            if isinstance(data, dict) and data.get('url'):
+                return data, result
+    return None, result
 
-    login_data = None
-    for output in [result.stdout, result.stderr]:
-        try:
-            login_data = json.loads(output.strip())
-            if login_data.get('url'):
-                break
-        except (json.JSONDecodeError, ValueError):
-            continue
+
+def amazon_login(nile_bin):
+    """Handle Amazon two-step device registration login flow."""
+    # Step 1: Get login data from nile
+    print("Getting Amazon login data...")
+    login_data, result = _nile_login_data(nile_bin)
+
+    # nile refuses to start a login while a session already exists (it returns no
+    # url, e.g. "You are already logged in"). A stale session can survive a
+    # GameVault logout, which would otherwise make re-login impossible. Detecting
+    # this by the ABSENCE of a url (not a specific message) keeps it robust across
+    # nile versions/locales: force a clean logout — `nile auth --logout` deregisters
+    # the device and clears its tokens — then retry once.
+    if not login_data:
+        print("No login url from nile; forcing a clean logout and retrying...", file=sys.stderr)
+        subprocess.run([nile_bin, 'auth', '--logout'], capture_output=True, text=True)
+        login_data, result = _nile_login_data(nile_bin)
 
     if not login_data or not login_data.get('url'):
         print(f"Failed to get login data from nile", file=sys.stderr)
