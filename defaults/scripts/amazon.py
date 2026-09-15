@@ -203,18 +203,31 @@ class Amazon(GamesDb.GamesDb):
             return cache
         print(f"cache miss!", file=sys.stderr)
 
-        # Check if nile user.json exists (indicates logged in)
-        user_json = os.path.join(self.nile_config_dir, 'user.json')
-        if os.path.exists(user_json):
+        # Ask nile directly — authoritative and version-proof. nile prints
+        # {"Username": "...", "LoggedIn": true|false} to stdout. (The old code
+        # checked for ~/.config/nile/user.json, but nile now stores its session in
+        # current_user.json + an encrypted device file, so that path never existed
+        # on current nile and login always looked "logged out".) SteamOS injects
+        # LD_PRELOAD warnings, so parse line-by-line rather than the whole output.
+        logged_in = False
+        username = ''
+        try:
+            output = self.execute_shell(f"{self.nile_cmd} auth --status")
+        except Exception as e:
+            print(f"[login_status] nile auth --status failed: {e}", file=sys.stderr)
+            output = ''
+        for line in output.splitlines():
+            line = line.strip()
             try:
-                with open(user_json, 'r') as f:
-                    user_data = json.load(f)
-                username = user_data.get('name', user_data.get('extensions', {}).get('customer_info', {}).get('name', 'Amazon User'))
-                value = json.dumps({'Type': 'LoginStatus', 'Content': {'Username': username, 'LoggedIn': True}})
-            except Exception:
-                value = json.dumps({'Type': 'LoginStatus', 'Content': {'Username': 'Amazon User', 'LoggedIn': True}})
-        else:
-            value = json.dumps({'Type': 'LoginStatus', 'Content': {'Username': '', 'LoggedIn': False}})
+                data = json.loads(line)
+            except (json.JSONDecodeError, ValueError):
+                continue
+            if isinstance(data, dict) and 'LoggedIn' in data:
+                logged_in = bool(data.get('LoggedIn'))
+                if logged_in:
+                    username = data.get('Username', '') or ''
+                break
+        value = json.dumps({'Type': 'LoginStatus', 'Content': {'Username': username, 'LoggedIn': logged_in}})
 
         timeout = datetime.now() + timedelta(hours=1)
         try:
