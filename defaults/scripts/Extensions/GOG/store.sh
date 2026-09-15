@@ -16,6 +16,9 @@ function GOG_init() {
     echo "[GOG_init] Starting. Checking .conf files in ${INSTALL_DIR} BEFORE list/retrodetect:" >> "${DECKY_PLUGIN_LOG_DIR}/detection.log" 2>&1
     find "${INSTALL_DIR}" -maxdepth 2 -name "*.conf" >> "${DECKY_PLUGIN_LOG_DIR}/detection.log" 2>&1 || echo "[GOG_init] No .conf files found" >> "${DECKY_PLUGIN_LOG_DIR}/detection.log" 2>&1
     $GOGCONF --list --dbfile "$DBFILE" >> "${DECKY_PLUGIN_LOG_DIR}/detection.log" 2>&1
+    # Self-heal: re-link any installed games whose SteamClientID/install info was lost
+    # (e.g. an older logout that wiped the DB) from their still-present Steam shortcuts.
+    $GOGCONF --detect-installed --dbfile "$DBFILE" >> "${DECKY_PLUGIN_LOG_DIR}/detection.log" 2>&1
     echo "[GOG_init] After --list. Checking .conf files:" >> "${DECKY_PLUGIN_LOG_DIR}/detection.log" 2>&1
     find "${INSTALL_DIR}" -maxdepth 2 -name "*.conf" >> "${DECKY_PLUGIN_LOG_DIR}/detection.log" 2>&1 || echo "[GOG_init] No .conf files found" >> "${DECKY_PLUGIN_LOG_DIR}/detection.log" 2>&1
     $GOGCONF --retrodetect --dbfile "$DBFILE" >> "${DECKY_PLUGIN_LOG_DIR}/detection.log" 2>&1
@@ -26,6 +29,12 @@ function GOG_init() {
 function GOG_refresh() {
     TEMP=$(GOG_init)
     echo "{\"Type\": \"RefreshContent\", \"Content\": {\"Message\": \"Refreshed\"}}"
+}
+
+function GOG_detect-installed(){
+    # Manual trigger for the same self-healing re-link GOG_init runs on login/refresh:
+    # restore installed games from their existing Steam shortcuts, no redownload.
+    $GOGCONF --detect-installed --dbfile "$DBFILE"
 }
 function GOG_getgames(){
     if [ -z "${1}" ]; then
@@ -271,8 +280,12 @@ function GOG_login-launch-options(){
 
 
 function GOG_logout(){
+    # Only drop the GOG auth tokens on logout. GOG installs are not DRM-locked and
+    # run without auth, so the library DB (and its SteamClientID install links) is
+    # left intact -- deleting it here is what made installed games vanish after a
+    # logout/login (issue #7). Detect-installed on login re-links anything that does
+    # get lost, so this is self-healing either way.
     rm -f "${AUTH_TOKENS}" 2>/dev/null
-    rm -f "${DBFILE}" 2>/dev/null
     GOG_loginstatus --flush-cache
 }
 

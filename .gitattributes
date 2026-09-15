@@ -1,0 +1,5 @@
+# Shell scripts must stay LF — they run on Linux (SteamOS/Bazzite). A CRLF
+# checkout on Windows produces `$'\r'` bash syntax errors when packaged.
+*.sh text eol=lf
+# Python scripts: LF too, for a clean, consistent runtime.
+*.py text eol=lf

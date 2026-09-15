@@ -60,6 +60,8 @@ class GOGArgs(GameSet.GenericArgs):
             '--getdlcs', help='List DLCs for a game (installed state included)')
         self.parser.add_argument(
             '--removedlc', nargs=2, help='Remove an installed DLC: <game_id> <dlc_id>')
+        self.parser.add_argument(
+            '--detect-installed', help='Re-link installed games from existing Steam shortcuts', action='store_true')
 
     def parseArgs(self):
         super().parseArgs()
@@ -125,6 +127,8 @@ class GOGArgs(GameSet.GenericArgs):
             if self.args.removedlc:
                 print(self.gameSet.remove_dlc(
                     self.args.removedlc[0], self.args.removedlc[1]))
+            if self.args.detect_installed:
+                print(self.gameSet.detect_installed())
             if not any(vars(self.args).values()):
                 self.parser.print_help()
         except gog.CmdException as e:
