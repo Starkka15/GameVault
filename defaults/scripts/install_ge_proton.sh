@@ -36,18 +36,33 @@ if [ -d "$COMPAT_DIR/$TAG" ]; then
     exit 0
 fi
 
-# Get download URL
+# Pick the asset matching THIS machine's architecture. GloriousEggroll ships
+# both x86_64 and aarch64 tarballs; releases up to GE-Proton11-3 name the x86_64
+# one plainly (GE-Proton11-3.tar.gz) while newer ones suffix it
+# (GE-Proton11-6-x86_64.tar.gz). The aarch64 build sorts first in the asset list,
+# so blindly taking the first .tar.gz installs the ARM build on an x86_64 Deck/Ally.
 DOWNLOAD_URL=$(echo "$RELEASE_JSON" | python3 -c "
-import sys, json
+import sys, json, platform
+machine = platform.machine().lower()
+is_arm = machine in ('aarch64', 'arm64')
 data = json.load(sys.stdin)
-for asset in data.get('assets', []):
-    if asset['name'].endswith('.tar.gz'):
-        print(asset['browser_download_url'])
-        break
+tarballs = [a for a in data.get('assets', []) if a['name'].endswith('.tar.gz')]
+def has(a, *toks):
+    n = a['name'].lower()
+    return any(t in n for t in toks)
+if is_arm:
+    pick = next((a for a in tarballs if has(a, 'aarch64', 'arm64')), None)
+else:
+    # explicit x86_64 asset (new naming), else a plain asset with no arch suffix
+    # (old naming); never fall through to the aarch64 build.
+    pick = next((a for a in tarballs if has(a, 'x86_64', 'amd64')), None) or \
+           next((a for a in tarballs if not has(a, 'aarch64', 'arm64')), None)
+if pick:
+    print(pick['browser_download_url'])
 " 2>/dev/null)
 
 if [ -z "$DOWNLOAD_URL" ]; then
-    echo "Error: No .tar.gz asset found in release."
+    echo "Error: No GE-Proton .tar.gz asset for architecture '$(uname -m)' found in release."
     exit 1
 fi
 
