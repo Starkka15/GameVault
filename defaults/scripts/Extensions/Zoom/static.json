@@ -1,0 +1,282 @@
+{
+  "gamevault-actions": {
+    "Type": "ActionSet",
+    "Content": {
+      "SetName": "GameVaultActions",
+      "Actions": [
+        {
+          "Id": "GetZoomActions",
+          "Title": "Get ZOOM Platform store actions",
+          "Type": "Init",
+          "Command": "./scripts/get-json.py zoom-actions"
+        }
+      ]
+    }
+  },
+  "gamevault-actions-no-tabs": {
+    "Type": "ActionSet",
+    "Content": {
+      "SetName": "GameVaultActionsNoTabs",
+      "Actions": [
+        {
+          "Id": "GetZoomActions",
+          "Title": "Get ZOOM Platform store actions",
+          "Type": "Init",
+          "Command": "./scripts/get-json.py zoom-actions"
+        }
+      ]
+    }
+  },
+  "main-menu-actions": {
+    "Type": "ActionSet",
+    "Content": {
+      "SetName": "MainMenu",
+      "Actions": [
+        {
+          "Id": "GetZoomActions",
+          "Title": "Get ZOOM Platform store actions",
+          "Type": "Init",
+          "Command": "./scripts/get-json.py zoom-actions"
+        }
+      ]
+    }
+  },
+  "gamevault-tabs": {
+    "Type": "StoreTabs",
+    "Content": {
+      "Tabs": [
+        {
+          "Title": "ZOOM Platform",
+          "Type": "GameGrid",
+          "ActionId": "GetZoomActions"
+        }
+      ]
+    }
+  },
+  "zoom-games-login-actions": {
+    "Type": "ActionSet",
+    "Content": {
+      "SetName": "ZoomGamesLoginActions",
+      "Actions": [
+        {
+          "Id": "Login",
+          "Title": "Login",
+          "Type": "Login",
+          "Command": "./scripts/gamevault.sh Zoom login"
+        },
+        {
+          "Id": "LoginLaunchOptions",
+          "Title": "Login",
+          "Type": "Login",
+          "Command": "./scripts/gamevault.sh Zoom login-launch-options"
+        },
+        {
+          "Id": "Logout",
+          "Title": "Logout",
+          "Type": "Logout",
+          "Command": "./scripts/gamevault.sh Zoom logout"
+        },
+        {
+          "Id": "GetContent",
+          "Title": "Status",
+          "Type": "Status",
+          "Command": "./scripts/gamevault.sh Zoom loginstatus"
+        },
+        {
+          "Id": "GetSetting",
+          "Title": "Get settings",
+          "Type": "GetSettings",
+          "Command": "./scripts/gamevault.sh Zoom getsetting"
+        },
+        {
+          "Id": "SaveSetting",
+          "Title": "Set settings",
+          "Type": "SaveSettings",
+          "Command": "./scripts/gamevault.sh Zoom savesetting"
+        }
+      ]
+    }
+  },
+  "zoom-game-script-actions": {
+    "Type": "ScriptSet",
+    "Content": {
+      "Actions": [
+        {
+          "ActionId": "UmuIdUpdate",
+          "Title": "Update UMU Id",
+          "Type": "ScriptAction",
+          "InstalledOnly": "True"
+        },
+        {
+          "ActionId": "LookupProtonfixes",
+          "Title": "Lookup Proton Fixes",
+          "Type": "ScriptAction",
+          "InstalledOnly": "True"
+        },
+        {
+          "ActionId": "ApplyProtonfixes",
+          "Title": "Apply Known Fixes",
+          "Type": "ScriptActionConfirm",
+          "InstalledOnly": "True"
+        }
+      ]
+    }
+  },
+  "zoom-script-actions": {
+    "Type": "ScriptSet",
+    "Content": {
+      "Actions": [
+        {
+          "ActionId": "Refresh",
+          "Title": "Refresh Games List",
+          "Type": "ScriptAction",
+          "InstalledOnly": "False"
+        }
+      ]
+    }
+  },
+  "zoom-exe-actions": {
+    "Type": "ActionSet",
+    "Content": {
+      "SetName": "ZoomExeActions",
+      "Actions": []
+    }
+  },
+  "zoom-config-actions": {
+    "Type": "ActionSet",
+    "Content": {
+      "SetName": "ZoomPlatformConfigFileActions",
+      "Actions": []
+    }
+  },
+  "zoom-tab-config-actions": {
+    "Type": "ActionSet",
+    "Content": {
+      "SetName": "ZoomTabConfigEditor",
+      "Actions": [
+        {
+          "Id": "GetContent",
+          "Title": "Get the ini files as json",
+          "Type": "IniEditor",
+          "Command": "./scripts/gamevault.sh Zoom gettabconfig"
+        },
+        {
+          "Id": "SaveContent",
+          "Title": "Save the ini files as json",
+          "Type": "IniEditor",
+          "Command": "./scripts/gamevault.sh Zoom savetabconfig"
+        }
+      ]
+    }
+  },
+  "zoom-actions": {
+    "Type": "ActionSet",
+    "Content": {
+      "SetName": "ZoomActions",
+      "Actions": [
+        {
+          "Id": "GetContent",
+          "Title": "Get ZOOM Platform games list",
+          "Type": "GameGrid",
+          "Command": "./scripts/gamevault.sh Zoom getgames"
+        },
+        {
+          "Id": "GetGameSize",
+          "Title": "Get game size",
+          "Type": "GameSize",
+          "Command": "./scripts/gamevault.sh Zoom getgamesize"
+        },
+        {
+          "Id": "GetDetails",
+          "Title": "Get game details",
+          "Type": "GameDetails",
+          "Command": "./scripts/gamevault.sh Zoom getgamedetails"
+        },
+        {
+          "Id": "GetJsonImages",
+          "Title": "Get game images as json",
+          "Type": "GameImages",
+          "Command": "./scripts/gamevault.sh Zoom getjsonimages"
+        },
+        {
+          "Id": "Install",
+          "Title": "Install game",
+          "Type": "Install",
+          "Command": "./scripts/gamevault.sh Zoom install"
+        },
+        {
+          "Id": "Download",
+          "Title": "Download game",
+          "Type": "Download",
+          "Command": "./scripts/gamevault.sh Zoom download"
+        },
+        {
+          "Id": "Uninstall",
+          "Title": "Uninstall game",
+          "Type": "Uninstall",
+          "Command": "./scripts/gamevault.sh Zoom uninstall"
+        },
+        {
+          "Id": "GetProgress",
+          "Title": "Get install progress",
+          "Type": "GetProgress",
+          "Command": "./scripts/gamevault.sh Zoom getprogress"
+        },
+        {
+          "Id": "CancelInstall",
+          "Title": "Cancel install",
+          "Type": "CancelInstall",
+          "Command": "./scripts/gamevault.sh Zoom cancelinstall"
+        },
+        {
+          "Id": "GetLoginActions",
+          "Title": "Get login status",
+          "Type": "Init",
+          "Command": "./scripts/get-json.py zoom-games-login-actions"
+        },
+        {
+          "Id": "GetLaunchOptions",
+          "Title": "Get launch options",
+          "Type": "GetLaunchOptions",
+          "Command": "./scripts/gamevault.sh Zoom getlaunchoptions"
+        },
+        {
+          "Id": "GetExeActions",
+          "Title": "Get executable action set to run exe's in game dir",
+          "Type": "Init",
+          "Command": "./scripts/get-json.py zoom-exe-actions"
+        },
+        {
+          "Id": "GetGameScriptActions",
+          "Title": "",
+          "Type": "ScriptActions",
+          "Command": "./scripts/get-json.py zoom-game-script-actions"
+        },
+        {
+          "Id": "GetScriptActions",
+          "Title": "",
+          "Type": "ScriptActions",
+          "Command": "./scripts/get-json.py zoom-script-actions"
+        },
+        {
+          "Id": "GetPlatformConfigFileActions",
+          "Title": "Get config file actions",
+          "Type": "Init",
+          "Command": "./scripts/get-json.py zoom-config-actions"
+        },
+        {
+          "Id": "GetTabConfigActions",
+          "Title": "Get ZOOM Platform tab config file actions",
+          "Type": "Init",
+          "Command": "./scripts/get-json.py zoom-tab-config-actions"
+        },
+        {
+          "Id": "Refresh",
+          "Title": "Refresh Games List",
+          "Type": "Refresh",
+          "Command": "./scripts/gamevault.sh Zoom refresh"
+        }
+      ]
+    }
+  }
+}

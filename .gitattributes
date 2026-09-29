@@ -3,3 +3,6 @@
 *.sh text eol=lf
 # Python scripts: LF too, for a clean, consistent runtime.
 *.py text eol=lf
+
+# Shell scripts must stay LF or they will not parse on the Deck.
+*.sh text eol=lf
