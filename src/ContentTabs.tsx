@@ -11,6 +11,7 @@ import { TextContent } from "./TextContent";
 import { MainMenu } from "./MainMenu";
 import { useCachedState } from './hooks/useCachedState';
 import { gamepadLibraryClasses } from './staticClasses';
+import { useTabVisibility, visibleTabs } from './hooks/useTabVisibility';
 interface ContentTabsProperties {
     
     content: StoreTabsContent;
@@ -26,16 +27,22 @@ export interface StoreTabsState {
 export const ContentTabs: FC<ContentTabsProperties> = ({ content, initAction, initActionSet, layout, subActionSet }) => {
     const { cacheState: cacheData, setCacheState: setCacheData } = useCachedState(initActionSet, initAction, 'tabcontent', { currentTab: "-1" });
 
+    const { hidden } = useTabVisibility();
+    const shownTabs = visibleTabs(content.Tabs, hidden);
+
     const getTabs: () => Tab[] = () => {
-        return content.Tabs.map((tab, index) => ({
+        return shownTabs.map((tab) => ({
             title: tab.Title,
             content: <Content key={tab.ActionId} initActionSet={subActionSet} initAction={tab.ActionId} />,
-            id: index.toString()
+            // Keyed by ActionId rather than array position: with tabs now being
+            // filtered, an index would point at a different store as soon as one
+            // was hidden, and the remembered tab would silently move.
+            id: tab.ActionId
         }));
     };
 
     const getPages: () => SidebarNavigationPage[] = () => {
-        return content.Tabs.map((tab) => ({
+        return shownTabs.map((tab) => ({
             title: tab.Title,
             content: <Content key={tab.ActionId} initActionSet={subActionSet} initAction={tab.ActionId} />,
             identifier: tab.Title,
@@ -43,13 +50,20 @@ export const ContentTabs: FC<ContentTabsProperties> = ({ content, initAction, in
         }));
     };
 
+    // Installs from before this change remember a numeric index, and hiding a
+    // tab can drop whichever one was active. Either way the stored id no longer
+    // matches anything, so fall back to the first tab that is actually there.
+    const activeTab = shownTabs.some((tab) => tab.ActionId === cacheData.currentTab)
+        ? cacheData.currentTab
+        : shownTabs[0]?.ActionId ?? "-1";
+
     return (
         <DialogBody key={initActionSet + "_" + initAction} className={contentTabsContainerClass}>
-            {content.Tabs.length === 0 ? <Loading /> : (layout === "horizontal" ? (
+            {shownTabs.length === 0 ? <Loading /> : (layout === "horizontal" ? (
                 <DialogControlsSection key={initActionSet + "_" + initAction + "horizontal"} className={gamepadLibraryClasses.GamepadLibrary}>
                     <Tabs
                         key="0"
-                        activeTab={cacheData.currentTab}
+                        activeTab={activeTab}
                         onShowTab={(tabID: string) => setCacheData({ currentTab: tabID })}
                         tabs={getTabs()}
                         autoFocusContents={true}

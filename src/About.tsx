@@ -11,6 +11,7 @@ import { Developer } from "./Developer";
 import { addAchievement, hasAchievement, hasAchievements } from "./Utils/achievements";
 import { Achievements } from "./Achievements";
 import { StorageTab } from "./StorageTab";
+import { StoreTabsSettings } from "./StoreTabsSettings";
 
 declare const __PLUGIN_VERSION__: string;
 
@@ -197,6 +198,10 @@ export const About: FC = () => {
                                 </ScrollableWindowRelative>
                             </div>
                         )
+                    },
+                    {
+                        title: "Store Tabs",
+                        content: <StoreTabsSettings />
                     },
                     {
                         title: "Storage",
