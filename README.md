@@ -1,12 +1,14 @@
 # Decky GameVault
 
-> **A community fork of [Junk-Store](https://github.com/ebenbruyns/junkstore) — an open, extensible multi-store game launcher for the Steam Deck and other Decky-compatible handhelds (ROG Ally, Legion Go, …).**
+> **An open, extensible multi-store game launcher for the Steam Deck and other Decky-compatible handhelds (ROG Ally, Legion Go, …).**
+>
+> Forked from [junkstore](https://github.com/ebenbruyns/junkstore) at v1.13, the last open-source release, and developed independently since.
 
 ## About
 
 GameVault lets you browse, install, and launch non-Steam games directly from Game Mode — no Desktop Mode required. Games are added to your Steam library as shortcuts with the right compatibility tool (Proton, or **native** for engines that don't need it), artwork, and per-game launch settings.
 
-Built on the Junk-Store framework, this fork adds eight store/library integrations and a large set of quality-of-life features on top of the original Epic Games support.
+GameVault adds eight store/library integrations and a large set of quality-of-life features on top of the Epic Games support it inherited at the fork point.
 
 **Current release: v1.3.1** — see [Releases](https://github.com/Starkka15/GameVault/releases).
 
@@ -25,7 +27,8 @@ Built on the Junk-Store framework, this fork adds eight store/library integratio
 
 ### A Note on GOG
 
-The official Junk-Store project offers its own GOG integration via [Patreon](https://www.patreon.com/junkstore) or [Ko-fi](https://ko-fi.com/junkstore). The GOG extension in this fork is a **separate, independently-built** implementation. If you want the officially supported GOG experience, please consider supporting the original project.
+The GOG extension here is an independently-built implementation. It shares no
+code with any other GOG integration.
 
 ### Setup Notes
 
@@ -40,9 +43,9 @@ The official Junk-Store project offers its own GOG integration via [Patreon](htt
 
 ## Features
 
-### Original (from Junk-Store)
+### Inherited at the fork point
 
-Part of the upstream framework GameVault is built on:
+Present in v1.13 and carried forward:
 
 - **Epic Games Store** — Full integration via Legendary (install, update, verify, repair)
 - **EOS Overlay Management** — Install, update, and remove the Epic Online Services overlay
@@ -194,13 +197,11 @@ If you'd like to help develop or flesh these out — more supported games, bette
 
 ## Credits
 
-### Original Project
-- [Junk-Store](https://github.com/ebenbruyns/junkstore) by Eben Bruyns
-- Eben Bruyns (junkrunner) — Software Sorcerer
-- Annie Ryan (mrs junkrunner) — Order Oracle
-- Jesse Bofill — Visual Virtuoso
-- Tech — Glitch Gladiator
-- Logan (Beebles) — UI Developer
+### Upstream
+
+GameVault forked from [junkstore](https://github.com/ebenbruyns/junkstore) at
+v1.13, Copyright (c) 2023 Eben Bruyns, BSD 3-Clause. The Epic Games integration
+and the extension framework date from that point.
 
 ### Community Fork
 - **Starkka15** — GOG, Amazon, itch.io, RPG Maker (native), EA Play, Ubisoft (Optima), and ZOOM Platform extensions; `optima-cli` (the Ubisoft Connect client itself); itch.io Collections; GOG DLC manager; My Added Games; cloud save sync; SteamGridDB integration + artwork scan; GE-Proton installer; protonfixes lookup/apply; storage management; batch install queue; update detection
@@ -215,7 +216,7 @@ Most of the fork's store extensions are wrappers that drive excellent third-part
 - **RPG Maker runtimes** — [**NW.js**](https://nwjs.io) (runs MV/MZ) by the NW.js project; [**mkxp-z**](https://github.com/mkxp-z/mkxp-z) (runs VX Ace/XP/VX), a continuation of [**mkxp**](https://github.com/Ancurio/mkxp) by Jonas Kulla (Ancurio). GameVault only repackages the mkxp-z AppImage; the runtime is theirs.
 - **Ubisoft (Optima) DRM loaders** — [`optima-cli`](https://github.com/Starkka15/Optima) is ours, but the emulation shims it deploys are **not**: the [Uplay R1 loader](https://github.com/Re0xCat/uplay-r1-loader) and [Orbit R2 loader](https://github.com/Re0xCat/ubiorbitapi-r2-loader) by **Re0xCat**, Ubisoft demux/manifest/install-protocol reversing by [**YoobieRE**](https://github.com/YoobieRE), and Proton launching via [**umu-launcher**](https://github.com/Open-Wine-Components/umu-launcher). We vendor and patch the loaders (e.g. the Orbit R2 shim is fixed up in `optima-cli`'s tree) so they work under our Proton launch flow — original authorship is unchanged.
 - **[zoom-platform.sh](https://github.com/DarthSidiousPT/zoom-platform.sh)** — installs ZOOM Platform's Windows titles under umu/Proton, behind the ZOOM extension. GameVault uses the actively-maintained fork by **DarthSidiousPT**; the [original](https://github.com/ZOOM-Platform/zoom-platform.sh) is by **ZOOM Platform** and has not been updated since December 2024, so it cannot read installers packaged with a recent Inno Setup. Thank you for keeping it working.
-- **[Legendary](https://github.com/derrod/legendary)** — the Epic Games downloader behind the Epic integration, by **Rui Pinheiro (derrod)** (used via the upstream Junk-Store Epic integration).
+- **[Legendary](https://github.com/derrod/legendary)** — the Epic Games downloader behind the Epic integration, by **Rui Pinheiro (derrod)**.
 - **[GE-Proton](https://github.com/GloriousEggroll/proton-ge-custom)** — the custom Proton build fetched by the GE-Proton installer, by **Thomas Crider (GloriousEggroll)**.
 - **[umu-protonfixes](https://github.com/Open-Wine-Components/umu-protonfixes)** — the Proton-fixes database behind the protonfixes lookup/apply feature (and [umu-launcher](https://github.com/Open-Wine-Components/umu-launcher), also used by Optima), by **Open-Wine-Components**.
 - **[SteamGridDB](https://www.steamgriddb.com)** — the community artwork source powering the artwork fallback and library artwork scan.
@@ -227,12 +228,17 @@ GameVault is a plugin for **[Decky Loader](https://github.com/SteamDeckHomebrew/
 
 ## Links
 
-- Original project: [github.com/ebenbruyns/junkstore](https://github.com/ebenbruyns/junkstore)
-- Official Junk-Store Discord: [![Chat](https://img.shields.io/badge/chat-on%20discord-7289da.svg)](https://discord.gg/Dy7JUNc44A)
+- Upstream project GameVault forked from: [github.com/ebenbruyns/junkstore](https://github.com/ebenbruyns/junkstore)
 
 ## License
 
-See [LICENSE](LICENSE). GameVault inherits Junk-Store's license as a fork.
+BSD 3-Clause — see [LICENSE](LICENSE). GameVault is a fork of junkstore v1.13 and
+carries that licence and its copyright notice forward.
+
+Per the third clause of that licence, the names of the upstream project and its
+contributors are **not** used to endorse or promote GameVault. GameVault is an
+independent project: it is not affiliated with, endorsed by, or supported by the
+upstream authors, and questions about it should come here rather than to them.
 
 ## AI Disclosure
 
