@@ -6,9 +6,9 @@
 
 GameVault lets you browse, install, and launch non-Steam games directly from Game Mode — no Desktop Mode required. Games are added to your Steam library as shortcuts with the right compatibility tool (Proton, or **native** for engines that don't need it), artwork, and per-game launch settings.
 
-Built on the Junk-Store framework, this fork adds seven store/library integrations and a large set of quality-of-life features on top of the original Epic Games support.
+Built on the Junk-Store framework, this fork adds eight store/library integrations and a large set of quality-of-life features on top of the original Epic Games support.
 
-**Current release: v1.2.2** — see [Releases](https://github.com/Starkka15/GameVault/releases).
+**Current release: v1.3.1** — see [Releases](https://github.com/Starkka15/GameVault/releases).
 
 ## Store & Library Integrations
 
@@ -21,6 +21,7 @@ Built on the Junk-Store framework, this fork adds seven store/library integratio
 | **RPG Maker** | NW.js / mkxp-z | **Native** (no Proton) | Drop-folder scanner for MV/MZ/VX Ace/XP/VX |
 | **EA Play** *(beta)* | maxima-cli | Proton | EA back-catalog titles |
 | **Ubisoft (Optima)** *(beta)* | optima-cli | Proton | Owned Ubisoft games via built-in Uplay R1 / Orbit R2 loaders — no Ubisoft Connect |
+| **ZOOM Platform** *(new)* | ZOOM website + zoom-platform.sh | Proton / native | DRM-free store — native Linux builds run without Proton |
 
 ### A Note on GOG
 
@@ -34,6 +35,7 @@ The official Junk-Store project offers its own GOG integration via [Patreon](htt
 - **itch.io** — Log in with your itch.io API key to access purchased and claimed games. See **itch.io Collections** below.
 - **RPG Maker** — Install dependencies (this fetches the native NW.js + mkxp-z runtimes), then drop game folders into the RPG Maker install location. See **RPG Maker (Native)** below.
 - **EA Play** *(beta)* — Requires the `maxima-cli` EA client. Install dependencies from the About menu, then log in with your EA account.
+- **ZOOM Platform** *(new)* — Install dependencies from the About menu (fetches `zoom-platform.sh`), then log in with your ZOOM email and password. Two-factor is supported. See **ZOOM Platform** below.
 - **Ubisoft (Optima)** *(beta)* — Install dependencies from the About menu (fetches the `optima-cli` runtime), then log in with your Ubisoft account in the browser. Games run through GameVault's own DRM loaders — no Ubisoft Connect install needed. See **Ubisoft (Optima)** below.
 
 ## Features
@@ -67,6 +69,8 @@ Added by this fork:
 - **RPG Maker (Native) Extension** — Run RPG Maker games with no Proton (see below)
 - **EA Play Extension** *(beta)* — Launch EA back-catalog titles through `maxima-cli`
 - **Ubisoft (Optima) Extension** *(beta)* — Install and launch owned Ubisoft games through built-in Uplay R1 / Orbit R2 loaders, no Ubisoft Connect required (see below)
+- **ZOOM Platform Extension** *(new)* — Login (including two-factor), library, install and launch for the DRM-free ZOOM store (see below)
+- **Hide Unused Store Tabs** — Turn off the stores you don't use in **About → Store Tabs**; hidden stores keep their logins and installed games and simply leave the tab bar
 - **My Added Games** — A tab for games you add manually, kept alongside the store libraries
 - **SteamGridDB Artwork Fallback** — Automatically fills missing artwork from SteamGridDB. Set your API key in any store's tab config (gear icon); results are cached per game
 - **Artwork Scan** — Sweep a library and backfill missing cover/hero/logo art
@@ -89,6 +93,30 @@ Runs RPG Maker games **natively** — no Wine or Proton — so they're light on 
 There's no store to log into — it's a **drop-folder scanner**. Copy a game's folder into the RPG Maker install location; the extension detects the engine, lists it, and "Add" creates a **native** Steam shortcut (compatibility tool cleared). The NW.js and mkxp-z runtimes are fetched by **About → Install Dependencies**.
 
 **Run-Time Packages (RTP):** some older VX Ace/XP/VX games rely on RPG Maker's shared RTP assets rather than bundling their own. When you run Install Dependencies, GameVault fetches those RTPs **directly from RPG Maker's official publisher source** (Degica/Kadokawa) and extracts them on-device — it does not re-host them. Most games ship self-contained and don't need this at all.
+
+### ZOOM Platform *(new)*
+
+[ZOOM Platform](https://www.zoom-platform.com) is a DRM-free store. The extension
+logs in with your email and password (two-factor supported), lists what you own,
+and installs it.
+
+Where a game ships **both**, the **native Linux build is preferred** — it is
+faster, needs no Proton, and installs unattended. Windows builds are installed
+through [zoom-platform.sh](https://github.com/DarthSidiousPT/zoom-platform.sh)
+with umu/Proton.
+
+This one is new and has been tested on a small number of titles. Things worth
+knowing:
+
+- **The game list may not refresh on its own after you log in.** Press
+  **Toggle Installed** to show installed games, then press it again — the list
+  will populate. Being looked into.
+- Windows installs run **silently**, so a game offering optional components gets
+  its defaults rather than asking.
+- A Windows install needs roughly the download size **plus** the installed size
+  free at its peak — about 15 GB for a 7 GB game.
+
+`zoom-platform.sh` is fetched by **About → Install Dependencies**.
 
 ### Ubisoft (Optima) *(beta)*
 
@@ -130,6 +158,31 @@ pnpm run build
 
 The frontend is TypeScript (React); most store extensions are shell + Python under `defaults/scripts/Extensions/<Store>/`. `dist/` is git-ignored and produced by the build.
 
+## Writing your own extension
+
+Stores are self-contained: an extension lives entirely under `defaults/` and
+never modifies the plugin's frontend. If you want GameVault to support a store
+it doesn't yet, you can add one — and **pull requests adding an extension are
+welcome**, so it can ship with the plugin for everyone.
+
+Two documents cover it:
+
+- **[docs/BUILD-AN-EXTENSION.md](docs/BUILD-AN-EXTENSION.md)** — a build order.
+  Nine steps from an empty folder to a working store, each one verifiable in the
+  UI before the next depends on it. Start here.
+- **[docs/EXTENSION-SYSTEM.md](docs/EXTENSION-SYSTEM.md)** — how the machinery
+  works: action resolution, the type contract every script must satisfy, the
+  install state machine, and what "installed" actually means to the UI.
+
+The guide begins by asking what kind of store you have, because that decides
+most of the work. If a maintained command-line client already exists for it
+(as with `gogdl`, `legendary` or `nile`) an extension is a thin adapter of a
+few hundred lines. Without one you are writing a download client, which is
+several times the work — worth knowing before you start.
+
+Copy the existing extension closest to your store rather than starting from
+scratch; the guide says which one to pick.
+
 ## Contributing / Backend CLIs
 
 The **Ubisoft (Optima)** and **EA Play (Maxima)** extensions are thin GameVault wrappers around standalone command-line clients. Those clients live in their own repos, are the place where the real login / install / launch logic lives, and **run standalone on the desktop** (no Decky or Steam required) — which makes them easy to hack on and test outside the plugin:
@@ -150,7 +203,7 @@ If you'd like to help develop or flesh these out — more supported games, bette
 - Logan (Beebles) — UI Developer
 
 ### Community Fork
-- **Starkka15** — GOG, Amazon, itch.io, RPG Maker (native), EA Play, and Ubisoft (Optima) extensions; `optima-cli` (the Ubisoft Connect client itself); itch.io Collections; GOG DLC manager; My Added Games; cloud save sync; SteamGridDB integration + artwork scan; GE-Proton installer; protonfixes lookup/apply; storage management; batch install queue; update detection
+- **Starkka15** — GOG, Amazon, itch.io, RPG Maker (native), EA Play, Ubisoft (Optima), and ZOOM Platform extensions; `optima-cli` (the Ubisoft Connect client itself); itch.io Collections; GOG DLC manager; My Added Games; cloud save sync; SteamGridDB integration + artwork scan; GE-Proton installer; protonfixes lookup/apply; storage management; batch install queue; update detection
 
 ### Backends & Third-Party Tools
 
@@ -161,6 +214,7 @@ Most of the fork's store extensions are wrappers that drive excellent third-part
 - **[Maxima](https://github.com/ArmchairDevelopers/Maxima)** (`maxima-cli`) — the open-source EA Desktop replacement powering the EA Play extension, by the **Maxima project (ArmchairDevelopers)** and contributors. We run a [forked branch](https://github.com/Starkka15/Maxima) that adds the non-interactive install/launch CLI plus GameVault-specific fixes (e.g. live download-progress reporting, install resume, registry self-heal).
 - **RPG Maker runtimes** — [**NW.js**](https://nwjs.io) (runs MV/MZ) by the NW.js project; [**mkxp-z**](https://github.com/mkxp-z/mkxp-z) (runs VX Ace/XP/VX), a continuation of [**mkxp**](https://github.com/Ancurio/mkxp) by Jonas Kulla (Ancurio). GameVault only repackages the mkxp-z AppImage; the runtime is theirs.
 - **Ubisoft (Optima) DRM loaders** — [`optima-cli`](https://github.com/Starkka15/Optima) is ours, but the emulation shims it deploys are **not**: the [Uplay R1 loader](https://github.com/Re0xCat/uplay-r1-loader) and [Orbit R2 loader](https://github.com/Re0xCat/ubiorbitapi-r2-loader) by **Re0xCat**, Ubisoft demux/manifest/install-protocol reversing by [**YoobieRE**](https://github.com/YoobieRE), and Proton launching via [**umu-launcher**](https://github.com/Open-Wine-Components/umu-launcher). We vendor and patch the loaders (e.g. the Orbit R2 shim is fixed up in `optima-cli`'s tree) so they work under our Proton launch flow — original authorship is unchanged.
+- **[zoom-platform.sh](https://github.com/DarthSidiousPT/zoom-platform.sh)** — installs ZOOM Platform's Windows titles under umu/Proton, behind the ZOOM extension. GameVault uses the actively-maintained fork by **DarthSidiousPT**; the [original](https://github.com/ZOOM-Platform/zoom-platform.sh) is by **ZOOM Platform** and has not been updated since December 2024, so it cannot read installers packaged with a recent Inno Setup. Thank you for keeping it working.
 - **[Legendary](https://github.com/derrod/legendary)** — the Epic Games downloader behind the Epic integration, by **Rui Pinheiro (derrod)** (used via the upstream Junk-Store Epic integration).
 - **[GE-Proton](https://github.com/GloriousEggroll/proton-ge-custom)** — the custom Proton build fetched by the GE-Proton installer, by **Thomas Crider (GloriousEggroll)**.
 - **[umu-protonfixes](https://github.com/Open-Wine-Components/umu-protonfixes)** — the Proton-fixes database behind the protonfixes lookup/apply feature (and [umu-launcher](https://github.com/Open-Wine-Components/umu-launcher), also used by Optima), by **Open-Wine-Components**.
