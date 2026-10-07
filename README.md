@@ -10,7 +10,7 @@ GameVault lets you browse, install, and launch non-Steam games directly from Gam
 
 GameVault adds eight store/library integrations and a large set of quality-of-life features on top of the Epic Games support it inherited at the fork point.
 
-**Current release: v1.3.1** — see [Releases](https://github.com/Starkka15/GameVault/releases).
+**Current release: v1.3.2** — see [Releases](https://github.com/Starkka15/GameVault/releases).
 
 ## Store & Library Integrations
 
