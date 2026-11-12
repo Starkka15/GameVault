@@ -84,6 +84,11 @@ export const ContentTabs: FC<ContentTabsProperties> = ({ content, initAction, in
 const contentCache: Map<string, { data: ContentResult<ContentType>; actionSet: string; time: number }> = new Map();
 const CONTENT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+/** Forget every cached result: the store tab bar changed (extension installed or removed). */
+export function clearContentCache() {
+    contentCache.clear();
+}
+
 export const Content: FC<{  initActionSet: string; initAction: string; closeModal?: ()=>void}> = ({ initActionSet, initAction, closeModal }) => {
     const logger = new Logger("Content");
     const [content, setContent] = useState<ContentResult<ContentType>>({ Type: "Empty", Content: {} });

@@ -10,7 +10,13 @@ GameVault lets you browse, install, and launch non-Steam games directly from Gam
 
 GameVault adds eight store/library integrations and a large set of quality-of-life features on top of the Epic Games support it inherited at the fork point.
 
-**Current release: v1.3.2** — see [Releases](https://github.com/Starkka15/GameVault/releases).
+**Epic Games, GOG and Amazon Games are built in.** The other stores are optional
+**extensions**: install the ones you use from **About → Extensions**, and GameVault
+tells you when one has an update. Extensions are published from
+[GameVault-Extensions](https://github.com/Starkka15/GameVault-Extensions) and update
+on their own schedule, without a new GameVault release.
+
+**Current release: v1.4.0** — see [Releases](https://github.com/Starkka15/GameVault/releases).
 
 ## Store & Library Integrations
 
@@ -19,11 +25,11 @@ GameVault adds eight store/library integrations and a large set of quality-of-li
 | **Epic Games** | Legendary | Proton | Original upstream integration |
 | **GOG** | gogdl | Proton | Community extension — login, install, DLC manager, cloud saves |
 | **Amazon Games** | Nile | Proton | Community extension |
-| **itch.io** | itch.io API | Proton / native | Owned games **and** your Collections |
-| **RPG Maker** | NW.js / mkxp-z | **Native** (no Proton) | Drop-folder scanner for MV/MZ/VX Ace/XP/VX |
-| **EA Play** *(beta)* | maxima-cli | Proton | EA back-catalog titles |
-| **Ubisoft (Optima)** *(beta)* | optima-cli | Proton | Owned Ubisoft games via built-in Uplay R1 / Orbit R2 loaders — no Ubisoft Connect |
-| **ZOOM Platform** *(new)* | ZOOM website + zoom-platform.sh | Proton / native | DRM-free store — native Linux builds run without Proton |
+| **itch.io** | itch.io API | Proton / native | Extension — owned games **and** your Collections |
+| **RPG Maker** | NW.js / mkxp-z | **Native** (no Proton) | Extension — drop-folder scanner for MV/MZ/VX Ace/XP/VX |
+| **EA Play** *(beta)* | maxima-cli | Proton | Extension — EA back-catalog titles |
+| **Ubisoft (Optima)** *(beta)* | optima-cli | Proton | Extension — owned Ubisoft games |
+| **ZOOM Platform** *(new)* | ZOOM website + zoom-platform.sh | Proton / native | Extension — DRM-free store; native Linux builds run without Proton |
 
 ### A Note on GOG
 
@@ -35,11 +41,14 @@ code with any other GOG integration.
 - **Epic Games** — Works out of the box. Log in from the plugin.
 - **GOG** — Install dependencies from the About menu first. Login uses a browser redirect (needs a keyboard to paste the redirect URL once).
 - **Amazon Games** — Install dependencies from the About menu first. Browser-redirect login, same as GOG.
+For an extension store, install it from **About → Extensions** first; that also
+installs what it depends on.
+
 - **itch.io** — Log in with your itch.io API key to access purchased and claimed games. See **itch.io Collections** below.
-- **RPG Maker** — Install dependencies (this fetches the native NW.js + mkxp-z runtimes), then drop game folders into the RPG Maker install location. See **RPG Maker (Native)** below.
-- **EA Play** *(beta)* — Requires the `maxima-cli` EA client. Install dependencies from the About menu, then log in with your EA account.
-- **ZOOM Platform** *(new)* — Install dependencies from the About menu (fetches `zoom-platform.sh`), then log in with your ZOOM email and password. Two-factor is supported. See **ZOOM Platform** below.
-- **Ubisoft (Optima)** *(beta)* — Install dependencies from the About menu (fetches the `optima-cli` runtime), then log in with your Ubisoft account in the browser. Games run through GameVault's own DRM loaders — no Ubisoft Connect install needed. See **Ubisoft (Optima)** below.
+- **RPG Maker** — Installing the extension fetches the native NW.js + mkxp-z runtimes; then drop game folders into the RPG Maker install location. See **RPG Maker (Native)** below.
+- **EA Play** *(beta)* — Installing the extension fetches the `maxima-cli` EA client; then log in with your EA account.
+- **ZOOM Platform** *(new)* — Installing the extension fetches `zoom-platform.sh`; then log in with your ZOOM email and password. Two-factor is supported. See **ZOOM Platform** below.
+- **Ubisoft (Optima)** *(beta)* — Installing the extension fetches the `optima-cli` runtime; then log in with your Ubisoft account in the browser. See **Ubisoft (Optima)** below.
 
 ## Features
 
@@ -73,6 +82,7 @@ Added by this fork:
 - **EA Play Extension** *(beta)* — Launch EA back-catalog titles through `maxima-cli`
 - **Ubisoft (Optima) Extension** *(beta)* — Install and launch owned Ubisoft games through built-in Uplay R1 / Orbit R2 loaders, no Ubisoft Connect required (see below)
 - **ZOOM Platform Extension** *(new)* — Login (including two-factor), library, install and launch for the DRM-free ZOOM store (see below)
+- **Optional Store Extensions** — Pick the stores you use in **About → Extensions**; install, update and remove them without reinstalling GameVault. Removing one keeps its login and library on the device
 - **Hide Unused Store Tabs** — Turn off the stores you don't use in **About → Store Tabs**; hidden stores keep their logins and installed games and simply leave the tab bar
 - **My Added Games** — A tab for games you add manually, kept alongside the store libraries
 - **SteamGridDB Artwork Fallback** — Automatically fills missing artwork from SteamGridDB. Set your API key in any store's tab config (gear icon); results are cached per game
@@ -143,14 +153,16 @@ The `optima-cli` runtime is fetched by **About → Install Dependencies**.
 2. Transfer it to your device.
 3. Extract to `~/homebrew/plugins/GameVault/`.
 4. Restart Decky Loader.
-5. Open the plugin, go to **About → Install Dependencies** to pull the runtimes needed by GOG, Amazon, EA Play, Ubisoft (Optima), and RPG Maker.
+5. Open the plugin, go to **About → Install Dependencies** to pull the runtimes needed by GOG and Amazon.
+6. Add any other stores you use from **About → Extensions**.
 
-### Adding a single extension to an existing install
+### Upgrading from v1.3.x
 
-Two extensions ship standalone installers you can run on-device to add them without reinstalling the whole plugin:
-
-- `install-itchio-extension.sh`
-- `install-rpgmaker-extension.sh`
+Up to v1.3.2 every store shipped inside GameVault. On the first start after
+upgrading, GameVault reinstalls, as extensions, the ones that have a library on
+your device, and repoints their games' Steam shortcuts, so nothing has to be set
+up again. It needs a network connection once for that; if it is offline it tries
+again on the next start.
 
 ## Building from source
 
@@ -159,18 +171,19 @@ pnpm install
 pnpm run build
 ```
 
-The frontend is TypeScript (React); most store extensions are shell + Python under `defaults/scripts/Extensions/<Store>/`. `dist/` is git-ignored and produced by the build.
+The frontend is TypeScript (React); the built-in stores are shell + Python under `defaults/scripts/Extensions/<Store>/`, the extension manager is `py_modules/extension_manager.py`. `dist/` is git-ignored and produced by the build.
 
 ## Writing your own extension
 
-Stores are self-contained: an extension lives entirely under `defaults/` and
-never modifies the plugin's frontend. If you want GameVault to support a store
-it doesn't yet, you can add one — and **pull requests adding an extension are
-welcome**, so it can ship with the plugin for everyone.
+Stores are self-contained: an extension is one folder that never modifies the
+plugin itself. If you want GameVault to support a store it doesn't yet, you can
+add one — **pull requests adding an extension to
+[GameVault-Extensions](https://github.com/Starkka15/GameVault-Extensions) are
+welcome**, so everyone can install it from About → Extensions.
 
 Two documents cover it:
 
-- **[docs/BUILD-AN-EXTENSION.md](docs/BUILD-AN-EXTENSION.md)** — a build order.
+- **[BUILD-AN-EXTENSION.md](https://github.com/Starkka15/GameVault-Extensions/blob/main/docs/BUILD-AN-EXTENSION.md)** (in GameVault-Extensions) — a build order.
   Nine steps from an empty folder to a working store, each one verifiable in the
   UI before the next depends on it. Start here.
 - **[docs/EXTENSION-SYSTEM.md](docs/EXTENSION-SYSTEM.md)** — how the machinery
@@ -193,7 +206,7 @@ The **Ubisoft (Optima)** and **EA Play (Maxima)** extensions are thin GameVault 
 - **Optima** (Ubisoft Connect client, Rust `optima-cli`) — [github.com/Starkka15/Optima](https://github.com/Starkka15/Optima)
 - **Maxima** (EA Desktop replacement, `maxima-cli`) — [github.com/Starkka15/Maxima](https://github.com/Starkka15/Maxima)
 
-If you'd like to help develop or flesh these out — more supported games, better DRM handling, online/auth work — contributions to those repos are welcome. GameVault picks up the improvements automatically the next time it fetches the runtime via **About → Install Dependencies**. Extension-side glue (tabs, install/launch scripts) lives here under `defaults/scripts/Extensions/{Optima,EA}/`.
+If you'd like to help develop or flesh these out — more supported games, better DRM handling, online/auth work — contributions to those repos are welcome. GameVault picks up the improvements the next time the extension's dependencies are installed. Extension-side glue (tabs, install/launch scripts) lives in [GameVault-Extensions](https://github.com/Starkka15/GameVault-Extensions) under `extensions/{Optima,EA}/`.
 
 ## Credits
 

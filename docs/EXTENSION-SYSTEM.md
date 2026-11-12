@@ -8,19 +8,33 @@ or in logs on a real device; nothing is assumed.
 
 ## 1. What an extension is
 
-An extension is a set of files under `defaults/`. It never touches `src/`.
+A store is one folder that never touches `src/`. Two places hold them:
+
+- **Built in** (Epic, GOG, Amazon): `defaults/scripts/Extensions/<Store>/`, with
+  their Python under `defaults/scripts/` and schemas under `defaults/conf_schemas/`.
+  They ship in `GameVault.zip`.
+- **Installed** (everything else): `~/homebrew/data/GameVault/scripts/Extensions/<Store>/`,
+  self-contained, put there by **About → Extensions** from the
+  [GameVault-Extensions](https://github.com/Starkka15/GameVault-Extensions) catalog.
+  The runtime data dir survives GameVault updates; the plugin dir does not.
+
+An installed extension's folder:
 
 ```
-defaults/scripts/<store>.py                       the client: auth, library, download
-defaults/scripts/<store>-config.py                CLI wrapper (argparse) around it
-defaults/scripts/Extensions/<Store>/static.json   action sets + the store tab
-defaults/scripts/Extensions/<Store>/store.sh      bash functions the dispatcher calls
-defaults/scripts/Extensions/<Store>/settings.sh   env: paths, DBFILE, INSTALL_DIR
-defaults/scripts/Extensions/<Store>/<store>-launcher.sh
-defaults/scripts/Extensions/<Store>/get-<store>-args.sh
-defaults/scripts/Extensions/<Store>/install_deps.sh
-defaults/conf_schemas/<store>tabconfig.json       tab settings schema
+manifest.json                 id, name, version, api, platform, database, owns
+static.json                   action sets + the store tab
+store.sh                      bash functions the dispatcher calls
+settings.sh                   env: paths, DBFILE, INSTALL_DIR
+<store>.py                    the client: auth, library, download
+<store>-config.py             CLI wrapper (argparse) around it
+<store>-launcher.sh, get-<store>-args.sh, login.sh, install_deps.sh
+conf_schemas/<store>tabconfig.json   default tab settings
 ```
+
+Every script finds its own folder as `<STORE>_EXT_DIR` (from `BASH_SOURCE`) and
+never builds a path to its own files from `DECKY_PLUGIN_DIR`. The authoring guide,
+[BUILD-AN-EXTENSION.md](https://github.com/Starkka15/GameVault-Extensions/blob/main/docs/BUILD-AN-EXTENSION.md),
+lives in that repo.
 
 Each store owns a SQLite DB (`<store>.db`) in `DECKY_PLUGIN_RUNTIME_DIR`,
 created from the shared schema in `GameSet.create_tables()`.
@@ -38,6 +52,42 @@ created from the shared schema in `GameSet.create_tables()`.
 shared `gamevault-tabs.Content.Tabs` array. The store tab bar is that union.
 
 Invoked as `get-json.py <key>`, it prints the merged fragment for that key.
+
+### Installing, updating, removing
+
+`py_modules/extension_manager.py` does it; nothing else in GameVault knows which
+stores exist.
+
+- The catalog is `index.json` on GameVault-Extensions `main`: per extension its
+  `version`, `api`, release-asset `url` and `sha256`. Only URLs under that repo's
+  releases are accepted. A file `~/homebrew/data/GameVault/extensions-catalog`
+  holding another URL or a local path replaces the catalog, for testing.
+- Install/update: download, check the sha256, check every zip path stays inside
+  one `<id>/` folder whose manifest matches the catalog, unpack beside the old
+  folder, swap, run the extension's `install_deps.sh`, clear the action cache.
+  An `api` newer than `EXTENSION_API` is refused ("needs a newer GameVault").
+- Then the frontend asks `relink_extension`: for every game in the manifest's
+  `database` with a `SteamClientID`, the store's `getlaunchoptions` is run and the
+  shortcut's exe, start dir and launch options are re-applied. This is what keeps
+  installed games launching when an extension's path changes.
+- Remove offers two choices. **Extension only** deletes the folder and the `owns`
+  folders; the store's database, saved tab settings (`conf_schemas/` in the
+  runtime dir) and games stay, so reinstalling picks up where it left off.
+  **Everything** runs the store's `uninstall` for each game with a shortcut or an
+  `InstallPath` (stopping, with nothing else touched, if any fails), then the store's
+  optional `purge` action (what its uninstall leaves behind), then
+  `logout`, then deletes the extension and its data: database (+`-wal`/`-shm`),
+  `<db>_overrides.sh`, `conf_schemas/<db>tabconfig.json` and the manifest's
+  `profile` paths. The frontend removes the returned Steam shortcuts. Shared
+  files (`steamgriddb_api_key`, other stores') and tool installs (`install_deps`
+  output) are left alone.
+- Built-in ids are refused.
+- Once per device (`.extensions-migrated`), at start, the stores that were built
+  in up to v1.3.2 are installed for anyone whose database for them has games;
+  their dependencies are not re-run (they are already there). The frontend polls
+  `take_pending_relinks` and repoints those shortcuts.
+- About 30 s after start the frontend checks the catalog once and toasts if an
+  installed extension has an update.
 
 ### Action resolution
 

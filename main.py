@@ -13,6 +13,9 @@ import aiohttp
 import os
 import concurrent.futures
 
+sys.path.insert(0, os.path.join(decky.DECKY_PLUGIN_DIR, "py_modules"))
+import extension_manager
+
 
 def _make_ssl_context():
     """Create an SSL context that works on Steam Deck.
@@ -48,6 +51,53 @@ class Helper:
     verbose = False
 
     lock = asyncio.Lock()
+
+    # Extensions installed by the first-start migration whose games still need
+    # their Steam shortcuts pointed at the new location (the frontend does that).
+    pending_relinks = []
+    migration_running = False
+    extension_lock = asyncio.Lock()
+
+    @staticmethod
+    async def run_extension_migration():
+        Helper.migration_running = True
+        try:
+            done = await extension_manager.migrate(Helper.get_environment())
+            if done:
+                Helper.action_cache.clear()
+                Helper.pending_relinks.extend(done)
+                decky.logger.info(f"extension migration installed: {done}")
+        except Exception as e:
+            decky.logger.error(f"extension migration failed: {e}")
+        finally:
+            Helper.migration_running = False
+
+    @staticmethod
+    async def extension_ws_action(data, websocket):
+        """install_extension / remove_extension, with output streamed to the UI."""
+        async def log(msg):
+            await websocket.send_str(json.dumps({"status": "open", "data": msg, "type": "stdout"}))
+
+        ext_id = str(data.get("id", ""))
+        result = {"status": "closed", "data": "", "id": ext_id, "ok": False}
+        try:
+            async with Helper.extension_lock:
+                if data["action"] == "install_extension":
+                    await extension_manager.install(ext_id, Helper.get_environment(), log)
+                    result["relink"] = True
+                elif data.get("profile"):
+                    async def run(platform, action, *args):
+                        return await Helper.call_script("./scripts/gamevault.sh", platform, action, *args)
+                    result["removedApps"] = await extension_manager.remove_profile(ext_id, run, log)
+                else:
+                    m = extension_manager.remove(ext_id)
+                    await log(f"{m.get('name', ext_id)} removed. Its login and library stay on this device.\n")
+                Helper.action_cache.clear()
+                result["ok"] = True
+        except Exception as e:
+            decky.logger.error(f"{data['action']} {ext_id}: {e}")
+            await log(f"ERROR: {e}\n")
+        await websocket.send_str(json.dumps(result))
 
     @staticmethod
     async def pyexec_subprocess(
@@ -493,6 +543,8 @@ class Helper:
                         websocket=websocket,
                         stream_output=True,
                     )
+                if data["action"] in ("install_extension", "remove_extension"):
+                    await Helper.extension_ws_action(data, websocket)
                 if data["action"] == "install_ge_proton":
                     await Helper.pyexec_subprocess(
                         "./scripts/install_ge_proton.sh",
@@ -675,6 +727,9 @@ class Plugin:
                 decky.logger.info(f"init result: {result}")
             await Helper.start_ws_server()
             decky.logger.info("GameVault started")
+            # Stores that used to ship in the zip come back as extensions for anyone
+            # who was using them. In the background: it may need the network.
+            asyncio.create_task(Helper.run_extension_migration())
 
         except Exception as e:
             decky.logger.error(f"Error in _main: {e}")
@@ -698,6 +753,83 @@ class Plugin:
                 decky.logger.info(f"init result: {result}")
         except Exception as e:
             decky.logger.error(f"Error in _main: {e}")
+
+    async def get_extensions(self):
+        """Built-in stores, installed extensions and the catalog, for the Extensions page."""
+        builtin = extension_manager.builtin_ids()
+        have = extension_manager.installed()
+        catalog, error = [], ""
+        try:
+            catalog = (await extension_manager.fetch_catalog())["extensions"]
+        except Exception as e:
+            error = str(e)
+            decky.logger.warning(f"extension catalog: {e}")
+        by_id = {e["id"]: e for e in catalog}
+        items = []
+        for e in catalog:
+            if e["id"] in builtin:
+                continue
+            m = have.get(e["id"])
+            items.append({
+                "id": e["id"],
+                "name": e["name"],
+                "description": e.get("description", ""),
+                "latest": e["version"],
+                "installed": m.get("version") if m else None,
+                "update": bool(m) and extension_manager.version_tuple(e["version"])
+                > extension_manager.version_tuple(m.get("version")),
+                "compatible": int(e.get("api", 1)) <= extension_manager.EXTENSION_API,
+            })
+        # Installed but no longer (or not yet) in the catalog: still removable.
+        for ext_id, m in have.items():
+            if ext_id not in by_id:
+                items.append({
+                    "id": ext_id,
+                    "name": m.get("name", ext_id),
+                    "description": m.get("description", ""),
+                    "latest": None,
+                    "installed": m.get("version"),
+                    "update": False,
+                    "compatible": True,
+                })
+        items.sort(key=lambda i: i["name"].lower())
+        return {
+            "Type": "Extensions",
+            "Content": {"builtin": builtin, "extensions": items, "error": error},
+        }
+
+    async def extension_removal_summary(self, ext_id: str):
+        """What removing an extension with everything would affect, for the dialog."""
+        try:
+            return extension_manager.removal_summary(ext_id)
+        except Exception as e:
+            return {"error": str(e)}
+
+    async def relink_extension(self, ext_id: str):
+        """Launch options for every installed game of an extension, so the frontend can
+        point their Steam shortcuts at the extension's current launcher."""
+        m = extension_manager.installed().get(ext_id)
+        if not m:
+            return []
+        platform = m.get("platform", ext_id)
+        out = []
+        for short, app_id in extension_manager.installed_games(m):
+            raw = await Helper.call_script("./scripts/gamevault.sh", platform, "getlaunchoptions", short)
+            try:
+                res = json.loads(raw or "")
+            except Exception:
+                decky.logger.warning(f"relink {ext_id}/{short}: no launch options")
+                continue
+            if res.get("Type") == "LaunchOptions":
+                out.append({"appId": app_id, "launchOptions": res.get("Content", {})})
+        decky.logger.info(f"relink {ext_id}: {len(out)} shortcuts")
+        return out
+
+    async def take_pending_relinks(self):
+        """Extensions the startup migration installed, handed to the frontend once."""
+        ids = list(Helper.pending_relinks)
+        Helper.pending_relinks.clear()
+        return {"running": Helper.migration_running, "ids": ids}
 
     async def get_websocket_port(self):
         return Helper.websocket_port

@@ -8,6 +8,7 @@ import { addAchievement, toastFactory } from "./Utils/achievements";
 import { MainMenuModal } from "./MainMenuModal";
 import { DownloadsPage } from "./Components/DownloadsPage";
 import { installQueue } from "./Utils/installQueue";
+import { startExtensionChecks } from "./Utils/extensions";
 
 
 
@@ -86,6 +87,8 @@ export default definePlugin(() => {
   );
   // Reconnect to any in-progress downloads that survived a close/reopen
   installQueue.reconnect();
+  // Finish moving formerly built-in stores to extensions; mention extension updates.
+  const stopExtensionChecks = startExtensionChecks();
 
 
 
@@ -101,6 +104,7 @@ export default definePlugin(() => {
       routerHook.removeRoute("/gamevault-downloads");
       unregister.unregister();
       installQueue.clear();
+      stopExtensionChecks();
     },
   };
 });
