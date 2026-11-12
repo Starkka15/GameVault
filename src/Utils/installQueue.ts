@@ -3,6 +3,7 @@ import { toaster } from "@decky/api";
 import { ContentType, ExecuteGetGameDetailsArgs, ExecuteInstallArgs, GameDetails, GameImages, LaunchOptions, ProgressUpdate } from "../Types/Types";
 import { executeAction } from "./executeAction";
 import Logger from "./logger";
+import { applyCompatTool } from "./utils";
 
 export type QueueItemStatus = "queued" | "downloading" | "installing" | "done" | "error";
 
@@ -404,29 +405,7 @@ class InstallQueue {
                 SteamClient.Apps.SetShortcutExe(steamId, launchOptions.Exe);
                 SteamClient.Apps.SetShortcutStartDir(steamId, launchOptions.WorkingDir);
 
-                if (launchOptions.Compatibility) {
-                    // @ts-ignore
-                    const defaultProton = settingsStore.settings.strCompatTool;
-                    if (defaultProton) {
-                        SteamClient.Apps.SpecifyCompatTool(steamId, defaultProton);
-                    } else {
-                        try {
-                            // @ts-ignore
-                            const compatTools = await SteamClient.Apps.GetAvailableCompatTools(1);
-                            const firstAvailable = compatTools.filter((tool: any) =>
-                                tool.strToolName.startsWith('proton') &&
-                                tool.strToolName.indexOf('experimental') === -1
-                            );
-                            if (firstAvailable.length > 0) {
-                                SteamClient.Apps.SpecifyCompatTool(steamId, firstAvailable[0].CompatToolName);
-                            }
-                        } catch (e) {
-                            logger.error("Error getting compat tools", e);
-                        }
-                    }
-                } else {
-                    SteamClient.Apps.SpecifyCompatTool(steamId, "");
-                }
+                await applyCompatTool(steamId, !!launchOptions.Compatibility);
             }
 
             // Step 4: Set images

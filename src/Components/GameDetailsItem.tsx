@@ -3,7 +3,7 @@ import { toaster } from "@decky/api";
 import { useState, useEffect, FC, useRef } from "react";
 import GameDisplay from "./GameDisplay";
 import { ContentError, ContentResult, ContentType, EmptyContent, ExecuteGetGameDetailsArgs, ExecuteInstallArgs, GameDetails, GameImages, LaunchOptions, MenuAction, ProgressUpdate, ScriptActions } from "../Types/Types";
-import { runApp } from "../Utils/utils";
+import { applyCompatTool, runApp } from "../Utils/utils";
 import Logger from "../Utils/logger";
 import { Loading } from "./Loading";
 import { executeAction } from "../Utils/executeAction";
@@ -266,24 +266,7 @@ export const GameDetailsItem: FC<GameDetailsItemProperties> = ({ shortname, init
             SteamClient.Apps.SetShortcutName(id, (gameData.Content as GameDetails).Name);
             SteamClient.Apps.SetShortcutExe(id, launchOptions.Exe);
             SteamClient.Apps.SetShortcutStartDir(id, launchOptions.WorkingDir);
-            const defaultProton = settingsStore.settings.strCompatTool;
-            if (launchOptions.Compatibility && launchOptions.Compatibility == true) {
-                logger.debug("Setting compatibility", launchOptions.CompatToolName);
-                if (defaultProton) {
-                    SteamClient.Apps.SpecifyCompatTool(id, defaultProton);
-                }
-                else {
-                    const compatTools = await SteamClient.Apps.GetAvailableCompatTools(1)
-                    const firstAvailable = compatTools.filter(tool => tool.strToolName.startsWith('proton') && tool.strToolName.indexOf('experimental') == -1)
-                    if (firstAvailable.length > 0) {
-                        SteamClient.Apps.SpecifyCompatTool(id, firstAvailable[0].CompatToolName);
-                    }
-                }
-            }
-            else {
-                logger.debug("Setting compatibility to empty string");
-                SteamClient.Apps.SpecifyCompatTool(id, "");
-            }
+            await applyCompatTool(id, launchOptions.Compatibility === true);
             setLocalInstalling(false);
             toaster.toast({
                 title: "GameVault",

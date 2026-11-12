@@ -67,6 +67,68 @@ export function registerForAppRunStateChange(appId: number, callback: () => void
     });
 }
 
+/**
+ * Apply the extension's compatibility choice to a shortcut.
+ *
+ * Compatibility=true: give the shortcut Steam's default Proton (or the first
+ * non-experimental Proton when no default is set).
+ *
+ * Compatibility=false (a native launcher that does its own Proton work, like
+ * EA/Maxima or Optima): leave Steam's compat setting alone. A shortcut that
+ * was never given a tool runs native on every Steam client. Calling
+ * SpecifyCompatTool(id, "") used to mean "no tool", but the 64-bit Steam
+ * client (steamrt64, Nov 2026) reads "" as "Default", which is Proton, and
+ * wraps the launcher in Proton + Steam Linux Runtime. So "" is only sent
+ * when the shortcut currently reports a tool, which is what clears it on
+ * older clients; on the new client nothing else can clear it anyway.
+ */
+export async function applyCompatTool(id: number, compatibility: boolean | undefined) {
+    const logger = new Logger("applyCompatTool");
+    const apps = SteamClient.Apps as any;
+
+    if (compatibility) {
+        // @ts-ignore
+        const defaultProton: string | undefined = settingsStore.settings.strCompatTool;
+        if (defaultProton) {
+            logger.debug("Setting compat tool", id, defaultProton);
+            apps.SpecifyCompatTool(id, defaultProton);
+            return;
+        }
+        // GetAvailableCompatTools no longer exists on the 64-bit client.
+        if (typeof apps.GetAvailableCompatTools !== "function") {
+            logger.debug("No default compat tool and no tool list; using proton-stable", id);
+            apps.SpecifyCompatTool(id, "proton-stable");
+            return;
+        }
+        try {
+            const compatTools = await apps.GetAvailableCompatTools(id);
+            const firstAvailable = compatTools.filter((tool: any) =>
+                tool.strToolName.startsWith('proton') &&
+                tool.strToolName.indexOf('experimental') === -1
+            );
+            if (firstAvailable.length > 0) {
+                apps.SpecifyCompatTool(id, firstAvailable[0].strToolName);
+            }
+        } catch (e) {
+            logger.error("Error getting compat tools", e);
+        }
+        return;
+    }
+
+    let current: string | undefined;
+    try {
+        current = (await getAppDetails(id))?.strCompatToolName;
+    } catch (e) {
+        logger.error("Could not read app details", id, e);
+    }
+    if (current) {
+        logger.debug("Clearing compat tool", id, current);
+        apps.SpecifyCompatTool(id, "");
+    } else {
+        logger.debug("No compat tool set; leaving native", id);
+    }
+}
+
 export function configureShortcut(id: number, launchOptions: LaunchOptions) {
     const logger = new Logger("configureShortcut");
 
