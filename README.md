@@ -16,7 +16,7 @@ tells you when one has an update. Extensions are published from
 [GameVault-Extensions](https://github.com/Starkka15/GameVault-Extensions) and update
 on their own schedule, without a new GameVault release.
 
-**Current release: v1.4.0** — see [Releases](https://github.com/Starkka15/GameVault/releases).
+**Current release: v1.4.1** — see [Releases](https://github.com/Starkka15/GameVault/releases).
 
 ## Store & Library Integrations
 
